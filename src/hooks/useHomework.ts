@@ -46,24 +46,24 @@ export function useHomework(familyId: string | undefined, date: string) {
 
     // 각 학원별로: 현재 날짜 이전(당일 포함) 중 가장 최근 숙제를 찾되,
     // 다음 숙제가 아직 안 온 경우에만 표시
-    for (const [, entries] of byAcademy) {
+    byAcademy.forEach((entries) => {
       // 날짜순 정렬
       const sorted = entries.sort((a, b) => a.date.localeCompare(b.date));
 
       // date 이하인 것 중 가장 마지막 것을 찾기
       let active: Homework | null = null;
-      for (const hw of sorted) {
-        if (hw.date <= date) {
-          active = hw;
+      for (let i = 0; i < sorted.length; i++) {
+        if (sorted[i].date <= date) {
+          active = sorted[i];
         } else {
-          break; // 날짜 초과하면 중단
+          break;
         }
       }
 
       if (active) {
         result.push(active);
       }
-    }
+    });
 
     return result;
   }, [allHomework, date]);
