@@ -15,7 +15,7 @@ import {
   Unsubscribe,
 } from "firebase/firestore";
 import { db } from "./config";
-import { Family, FamilyMember, Schedule, Check } from "@/types";
+import { Family, FamilyMember, Schedule, Check, Homework, HomeworkItem } from "@/types";
 
 // ==================== Families ====================
 
@@ -207,5 +207,80 @@ export function subscribeChecks(
       checksMap.set(check.scheduleId, check);
     });
     callback(checksMap);
+  });
+}
+
+// ==================== Homework ====================
+
+export async function createHomework(
+  data: Omit<Homework, "id" | "createdAt">
+): Promise<string> {
+  const ref = doc(collection(db, "homework"));
+  await setDoc(ref, {
+    ...data,
+    createdAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+export async function updateHomework(
+  homeworkId: string,
+  data: Partial<Omit<Homework, "id" | "createdAt">>
+): Promise<void> {
+  await updateDoc(doc(db, "homework", homeworkId), data);
+}
+
+export async function deleteHomework(homeworkId: string): Promise<void> {
+  await deleteDoc(doc(db, "homework", homeworkId));
+}
+
+export async function toggleHomeworkItem(
+  homeworkId: string,
+  items: HomeworkItem[],
+  itemIndex: number,
+  checkerUid: string,
+  checkerName: string
+): Promise<void> {
+  const updated = items.map((item, i) => {
+    if (i !== itemIndex) return item;
+    return item.checked
+      ? { content: item.content, checked: false }
+      : { content: item.content, checked: true, checkedBy: checkerUid, checkedByName: checkerName };
+  });
+  await updateDoc(doc(db, "homework", homeworkId), { items: updated });
+}
+
+export function subscribeHomeworkByDate(
+  familyId: string,
+  date: string,
+  callback: (homework: Homework[]) => void
+): Unsubscribe {
+  const q = query(
+    collection(db, "homework"),
+    where("familyId", "==", familyId),
+    where("date", "==", date)
+  );
+  return onSnapshot(q, (snapshot) => {
+    const list = snapshot.docs.map(
+      (d) => ({ id: d.id, ...d.data() } as Homework)
+    );
+    callback(list);
+  });
+}
+
+export function subscribeAllHomework(
+  familyId: string,
+  callback: (homework: Homework[]) => void
+): Unsubscribe {
+  const q = query(
+    collection(db, "homework"),
+    where("familyId", "==", familyId)
+  );
+  return onSnapshot(q, (snapshot) => {
+    const list = snapshot.docs.map(
+      (d) => ({ id: d.id, ...d.data() } as Homework)
+    );
+    list.sort((a, b) => a.date.localeCompare(b.date));
+    callback(list);
   });
 }

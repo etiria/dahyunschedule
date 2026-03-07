@@ -46,3 +46,23 @@ export interface Check {
   checkedByName: string;
   checkedAt: Timestamp | null;
 }
+
+// ==================== Homework ====================
+
+export interface HomeworkItem {
+  content: string;
+  checked: boolean;
+  checkedBy?: string;
+  checkedByName?: string;
+}
+
+export interface Homework {
+  id: string;
+  familyId: string;
+  academyName: string;
+  date: string; // "YYYY-MM-DD"
+  items: HomeworkItem[];
+  note?: string;
+  createdAt: Timestamp;
+  createdBy: string;
+}
