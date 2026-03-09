@@ -30,6 +30,8 @@ export interface Schedule {
   endTime: string; // "HH:mm"
   daysOfWeek: number[]; // 0=Sun, 1=Mon, ..., 6=Sat
   color: string;
+  pickupTime?: string; // "HH:mm" 픽업 시간
+  dropoffTime?: string; // "HH:mm" 드랍 시간
   notes?: string;
   createdAt: Timestamp;
   createdBy: string;

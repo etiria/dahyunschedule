@@ -52,6 +52,20 @@ export default function ScheduleCard({
         {schedule.location && (
           <p className="text-sm text-gray-500 mt-0.5">{schedule.location}</p>
         )}
+        {(schedule.pickupTime || schedule.dropoffTime) && (
+          <div className="flex gap-3 mt-1">
+            {schedule.pickupTime && (
+              <span className="text-xs text-blue-500">
+                🚗 픽업 {formatTime(schedule.pickupTime)}
+              </span>
+            )}
+            {schedule.dropoffTime && (
+              <span className="text-xs text-orange-500">
+                🚗 드랍 {formatTime(schedule.dropoffTime)}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       <CheckButton

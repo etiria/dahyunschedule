@@ -13,6 +13,8 @@ export interface ScheduleFormData {
   endTime: string;
   daysOfWeek: number[];
   color: string;
+  pickupTime: string;
+  dropoffTime: string;
   notes: string;
 }
 
@@ -42,6 +44,8 @@ export default function ScheduleForm({
   const [color, setColor] = useState(
     initialData?.color || PRESET_COLORS[0]
   );
+  const [pickupTime, setPickupTime] = useState(initialData?.pickupTime || "");
+  const [dropoffTime, setDropoffTime] = useState(initialData?.dropoffTime || "");
   const [notes, setNotes] = useState(initialData?.notes || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -68,6 +72,8 @@ export default function ScheduleForm({
         endTime,
         daysOfWeek,
         color,
+        pickupTime,
+        dropoffTime,
         notes: notes.trim(),
       });
     } catch {
@@ -155,6 +161,34 @@ export default function ScheduleForm({
           />
         </div>
       </div>
+
+      {/* Pickup / Dropoff time (학원만) */}
+      {type === "academy" && (
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              픽업 시간 <span className="text-gray-400">(선택)</span>
+            </label>
+            <input
+              type="time"
+              value={pickupTime}
+              onChange={(e) => setPickupTime(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              드랍 시간 <span className="text-gray-400">(선택)</span>
+            </label>
+            <input
+              type="time"
+              value={dropoffTime}
+              onChange={(e) => setDropoffTime(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Days of week */}
       <div>

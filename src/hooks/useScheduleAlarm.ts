@@ -4,7 +4,8 @@ import { useEffect, useRef, useCallback } from "react";
 import { Schedule } from "@/types";
 import { getDayOfWeek, getDateString } from "@/lib/utils/date";
 
-const ALARM_BEFORE_MINUTES = 15;
+const ACADEMY_ALARM_BEFORE = 15; // 학원 수업 시작 15분 전
+const PICKUP_ALARM_BEFORE = 5; // 픽업/드랍 5분 전
 const CHECK_INTERVAL_MS = 30 * 1000; // 30초마다 체크
 
 // 알림 소리 재생
@@ -39,28 +40,29 @@ export async function requestNotificationPermission(): Promise<boolean> {
 }
 
 // 브라우저 알림 보내기
-function sendNotification(schedule: Schedule, minutesBefore: number) {
+function sendNotification(title: string, body: string, tag: string) {
   if (!("Notification" in window) || Notification.permission !== "granted") {
     return;
   }
 
-  const title = `${schedule.title} ${minutesBefore}분 전`;
-  const body = schedule.location
-    ? `${schedule.startTime} 시작 · ${schedule.location}`
-    : `${schedule.startTime} 시작`;
-
   const notification = new Notification(title, {
     body,
     icon: "/icons/icon.svg",
-    tag: `alarm-${schedule.id}-${getDateString(new Date())}`,
+    tag,
     requireInteraction: true,
   });
 
-  // 알림 클릭 시 앱으로 이동
   notification.onclick = () => {
     window.focus();
     notification.close();
   };
+}
+
+function fireAlarm(key: string, title: string, body: string, tag: string, firedSet: Set<string>) {
+  if (firedSet.has(key)) return;
+  firedSet.add(key);
+  sendNotification(title, body, tag);
+  playAlarmSound();
 }
 
 export function useScheduleAlarm(schedules: Schedule[]) {
@@ -81,15 +83,52 @@ export function useScheduleAlarm(schedules: Schedule[]) {
     academySchedules.forEach((schedule) => {
       const [h, m] = schedule.startTime.split(":").map(Number);
       const startMinutes = h * 60 + m;
-      const alarmMinutes = startMinutes - ALARM_BEFORE_MINUTES;
-      const diff = alarmMinutes - nowMinutes;
+      const fired = firedRef.current;
 
-      // 알람 시간이 지금부터 0~1분 이내이고, 아직 안 울렸으면
-      const alarmKey = `${schedule.id}_${todayStr}`;
-      if (diff >= -1 && diff <= 1 && !firedRef.current.has(alarmKey)) {
-        firedRef.current.add(alarmKey);
-        sendNotification(schedule, ALARM_BEFORE_MINUTES);
-        playAlarmSound();
+      // 1) 학원 수업 시작 15분 전 알림
+      const classAlarmMin = startMinutes - ACADEMY_ALARM_BEFORE;
+      const classDiff = classAlarmMin - nowMinutes;
+      if (classDiff >= -1 && classDiff <= 1) {
+        const loc = schedule.location ? ` · ${schedule.location}` : "";
+        fireAlarm(
+          `class_${schedule.id}_${todayStr}`,
+          `${schedule.title} ${ACADEMY_ALARM_BEFORE}분 전`,
+          `${schedule.startTime} 시작${loc}`,
+          `alarm-class-${schedule.id}-${todayStr}`,
+          fired
+        );
+      }
+
+      // 2) 픽업 5분 전 알림
+      if (schedule.pickupTime) {
+        const [ph, pm] = schedule.pickupTime.split(":").map(Number);
+        const pickupMin = ph * 60 + pm;
+        const pickupDiff = (pickupMin - PICKUP_ALARM_BEFORE) - nowMinutes;
+        if (pickupDiff >= -1 && pickupDiff <= 1) {
+          fireAlarm(
+            `pickup_${schedule.id}_${todayStr}`,
+            `🚗 ${schedule.title} 픽업 ${PICKUP_ALARM_BEFORE}분 전`,
+            `${schedule.pickupTime} 픽업 출발`,
+            `alarm-pickup-${schedule.id}-${todayStr}`,
+            fired
+          );
+        }
+      }
+
+      // 3) 드랍 5분 전 알림
+      if (schedule.dropoffTime) {
+        const [dh, dm] = schedule.dropoffTime.split(":").map(Number);
+        const dropMin = dh * 60 + dm;
+        const dropDiff = (dropMin - PICKUP_ALARM_BEFORE) - nowMinutes;
+        if (dropDiff >= -1 && dropDiff <= 1) {
+          fireAlarm(
+            `drop_${schedule.id}_${todayStr}`,
+            `🚗 ${schedule.title} 드랍 ${PICKUP_ALARM_BEFORE}분 전`,
+            `${schedule.dropoffTime} 드랍 출발`,
+            `alarm-drop-${schedule.id}-${todayStr}`,
+            fired
+          );
+        }
       }
     });
   }, [schedules]);
