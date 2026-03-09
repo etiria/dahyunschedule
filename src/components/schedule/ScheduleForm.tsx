@@ -14,7 +14,9 @@ export interface ScheduleFormData {
   daysOfWeek: number[];
   color: string;
   pickupTime: string;
+  pickupLocation: string;
   dropoffTime: string;
+  dropoffLocation: string;
   notes: string;
 }
 
@@ -45,7 +47,9 @@ export default function ScheduleForm({
     initialData?.color || PRESET_COLORS[0]
   );
   const [pickupTime, setPickupTime] = useState(initialData?.pickupTime || "");
+  const [pickupLocation, setPickupLocation] = useState(initialData?.pickupLocation || "");
   const [dropoffTime, setDropoffTime] = useState(initialData?.dropoffTime || "");
+  const [dropoffLocation, setDropoffLocation] = useState(initialData?.dropoffLocation || "");
   const [notes, setNotes] = useState(initialData?.notes || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -73,7 +77,9 @@ export default function ScheduleForm({
         daysOfWeek,
         color,
         pickupTime,
+        pickupLocation: pickupLocation.trim(),
         dropoffTime,
+        dropoffLocation: dropoffLocation.trim(),
         notes: notes.trim(),
       });
     } catch {
@@ -162,32 +168,60 @@ export default function ScheduleForm({
         </div>
       </div>
 
-      {/* Pickup / Dropoff time (학원만) */}
+      {/* Pickup / Dropoff (학원만) */}
       {type === "academy" && (
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              픽업 시간 <span className="text-gray-400">(선택)</span>
-            </label>
-            <input
-              type="time"
-              value={pickupTime}
-              onChange={(e) => setPickupTime(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-            />
+        <>
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                픽업 시간 <span className="text-gray-400">(선택)</span>
+              </label>
+              <input
+                type="time"
+                value={pickupTime}
+                onChange={(e) => setPickupTime(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                픽업 장소 <span className="text-gray-400">(선택)</span>
+              </label>
+              <input
+                type="text"
+                value={pickupLocation}
+                onChange={(e) => setPickupLocation(e.target.value)}
+                placeholder="예: 정문 앞"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+            </div>
           </div>
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              드랍 시간 <span className="text-gray-400">(선택)</span>
-            </label>
-            <input
-              type="time"
-              value={dropoffTime}
-              onChange={(e) => setDropoffTime(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-            />
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                드랍 시간 <span className="text-gray-400">(선택)</span>
+              </label>
+              <input
+                type="time"
+                value={dropoffTime}
+                onChange={(e) => setDropoffTime(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                드랍 장소 <span className="text-gray-400">(선택)</span>
+              </label>
+              <input
+                type="text"
+                value={dropoffLocation}
+                onChange={(e) => setDropoffLocation(e.target.value)}
+                placeholder="예: 학원 앞"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Days of week */}

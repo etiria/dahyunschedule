@@ -89,7 +89,9 @@ export default function EditSchedulePage() {
             daysOfWeek: schedule.daysOfWeek,
             color: schedule.color,
             pickupTime: schedule.pickupTime || "",
+            pickupLocation: schedule.pickupLocation || "",
             dropoffTime: schedule.dropoffTime || "",
+            dropoffLocation: schedule.dropoffLocation || "",
             notes: schedule.notes || "",
           }}
           onSubmit={handleSubmit}

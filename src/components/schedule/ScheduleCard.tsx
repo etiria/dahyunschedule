@@ -57,11 +57,13 @@ export default function ScheduleCard({
             {schedule.pickupTime && (
               <span className="text-xs text-blue-500">
                 🚗 픽업 {formatTime(schedule.pickupTime)}
+                {schedule.pickupLocation && ` · ${schedule.pickupLocation}`}
               </span>
             )}
             {schedule.dropoffTime && (
               <span className="text-xs text-orange-500">
                 🚗 드랍 {formatTime(schedule.dropoffTime)}
+                {schedule.dropoffLocation && ` · ${schedule.dropoffLocation}`}
               </span>
             )}
           </div>
