@@ -8,6 +8,7 @@ import { useDateNavigation } from "@/hooks/useDateNavigation";
 import { getDateString } from "@/lib/utils/date";
 import { createHomework } from "@/lib/firebase/firestore";
 import { ENGLISH_BOUTIQUE_DATA } from "@/lib/data/englishBoutiqueHomework";
+import { ENGLISH_BOUTIQUE_APRIL_DATA } from "@/lib/data/englishBoutiqueHomeworkApril";
 import Header from "@/components/layout/Header";
 import DateSelector from "@/components/layout/DateSelector";
 import HomeworkCard from "@/components/schedule/HomeworkCard";
@@ -21,6 +22,8 @@ export default function HomeworkPage() {
   const { homework, loading } = useHomework(family?.id, dateString);
   const [seeding, setSeeding] = useState(false);
   const [seeded, setSeeded] = useState(false);
+  const [seedingApril, setSeedingApril] = useState(false);
+  const [seededApril, setSeededApril] = useState(false);
 
   const seedEnglishBoutique = useCallback(async () => {
     if (!family || !user) return;
@@ -37,6 +40,23 @@ export default function HomeworkPage() {
     }
     setSeeding(false);
     setSeeded(true);
+  }, [family, user]);
+
+  const seedEnglishBoutiqueApril = useCallback(async () => {
+    if (!family || !user) return;
+    setSeedingApril(true);
+    for (const entry of ENGLISH_BOUTIQUE_APRIL_DATA) {
+      await createHomework({
+        familyId: family.id,
+        academyName: "잉글리시 부띠끄",
+        date: entry.date,
+        items: entry.items.map((content) => ({ content, checked: false })),
+        note: entry.note,
+        createdBy: user.uid,
+      });
+    }
+    setSeedingApril(false);
+    setSeededApril(true);
   }, [family, user]);
 
   if (!family || !user) return null;
@@ -112,7 +132,31 @@ export default function HomeworkPage() {
         )}
         {seeded && (
           <p className="text-center text-sm text-green-600 font-medium">
-            잉글리시 부띠끄 숙제가 입력되었습니다!
+            잉글리시 부띠끄 3월 숙제가 입력되었습니다!
+          </p>
+        )}
+
+        {/* 잉글리시 부띠끄 4월 데이터 일괄 입력 */}
+        {!seededApril && (
+          <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
+            <p className="text-sm font-medium text-blue-800 mb-2">
+              잉글리시 부띠끄 4월 숙제
+            </p>
+            <p className="text-xs text-blue-600 mb-3">
+              4월 전체 숙제 데이터를 한번에 입력합니다 (12회차)
+            </p>
+            <button
+              onClick={seedEnglishBoutiqueApril}
+              disabled={seedingApril}
+              className="w-full py-2 bg-blue-500 text-white rounded-xl text-sm font-medium disabled:opacity-50 active:bg-blue-600"
+            >
+              {seedingApril ? "입력 중..." : "일괄 입력하기"}
+            </button>
+          </div>
+        )}
+        {seededApril && (
+          <p className="text-center text-sm text-green-600 font-medium">
+            잉글리시 부띠끄 4월 숙제가 입력되었습니다!
           </p>
         )}
       </div>
