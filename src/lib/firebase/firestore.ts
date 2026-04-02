@@ -110,6 +110,31 @@ export function subscribeFamilyByUid(
   });
 }
 
+export async function getAllFamiliesByUid(
+  uid: string
+): Promise<(Family & { id: string })[]> {
+  const q = query(
+    collection(db, "families"),
+    where("memberUids", "array-contains", uid)
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(
+    (d) => ({ id: d.id, ...d.data() } as Family & { id: string })
+  );
+}
+
+export async function deleteFamily(familyId: string): Promise<void> {
+  await deleteDoc(doc(db, "families", familyId));
+}
+
+export async function updateInviteCode(
+  familyId: string,
+  newCode: string
+): Promise<void> {
+  const familyRef = doc(db, "families", familyId);
+  await updateDoc(familyRef, { inviteCode: newCode.toUpperCase() });
+}
+
 // ==================== Schedules ====================
 
 export async function createSchedule(

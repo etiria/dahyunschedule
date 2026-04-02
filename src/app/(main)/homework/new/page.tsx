@@ -1,14 +1,27 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { Suspense, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useFamily } from "@/context/FamilyContext";
 import { useAuth } from "@/context/AuthContext";
 import { createHomework } from "@/lib/firebase/firestore";
 import { getDateString } from "@/lib/utils/date";
-import Image from "next/image";
 
 export default function NewHomeworkPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <NewHomeworkContent />
+    </Suspense>
+  );
+}
+
+function NewHomeworkContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { family } = useFamily();
@@ -219,11 +232,10 @@ export default function NewHomeworkPage() {
           {/* 미리보기 */}
           {previewUrl && (
             <div className="mt-3 relative rounded-xl overflow-hidden">
-              <Image
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={previewUrl}
                 alt="숙제 사진"
-                width={400}
-                height={300}
                 className="w-full h-40 object-cover rounded-xl"
               />
               {!extracting && (
