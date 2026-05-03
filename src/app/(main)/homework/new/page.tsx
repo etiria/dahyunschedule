@@ -1,9 +1,10 @@
 "use client";
 
-import { Suspense, useState, useRef } from "react";
+import { Suspense, useState, useRef, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useFamily } from "@/context/FamilyContext";
 import { useAuth } from "@/context/AuthContext";
+import { useSchedules } from "@/hooks/useSchedules";
 import { createHomework } from "@/lib/firebase/firestore";
 import { getDateString } from "@/lib/utils/date";
 
@@ -26,10 +27,23 @@ function NewHomeworkContent() {
   const searchParams = useSearchParams();
   const { family } = useFamily();
   const { user } = useAuth();
+  const { schedules } = useSchedules(family?.id);
+
+  // 학원 타입 스케줄만 추출 (중복 제거)
+  const academyOptions = useMemo(() => {
+    const academySchedules = schedules.filter((s) => s.type === "academy");
+    const seen = new Set<string>();
+    return academySchedules.filter((s) => {
+      if (seen.has(s.title)) return false;
+      seen.add(s.title);
+      return true;
+    });
+  }, [schedules]);
 
   const today = getDateString(new Date());
   const [date, setDate] = useState(searchParams.get("date") || today);
   const [academyName, setAcademyName] = useState("");
+  const [customAcademy, setCustomAcademy] = useState(false);
   const [note, setNote] = useState("");
   const [itemsText, setItemsText] = useState("");
   const [saving, setSaving] = useState(false);
@@ -41,6 +55,16 @@ function NewHomeworkContent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!family || !user) return null;
+
+  const handleAcademySelect = (value: string) => {
+    if (value === "__custom__") {
+      setCustomAcademy(true);
+      setAcademyName("");
+    } else {
+      setCustomAcademy(false);
+      setAcademyName(value);
+    }
+  };
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -54,7 +78,6 @@ function NewHomeworkContent() {
     const reader = new FileReader();
     reader.onload = async () => {
       const base64Full = reader.result as string;
-      // "data:image/jpeg;base64,..." 에서 base64 부분만 추출
       const base64 = base64Full.split(",")[1];
       const mimeType = file.type || "image/jpeg";
 
@@ -77,9 +100,21 @@ function NewHomeworkContent() {
 
         // 추출된 데이터로 폼 채우기
         if (data.academyName && !academyName) {
-          setAcademyName(data.academyName);
+          // AI가 추출한 이름이 기존 학원 목록에 있는지 확인
+          const match = academyOptions.find(
+            (s) =>
+              s.title.toLowerCase().includes(data.academyName.toLowerCase()) ||
+              data.academyName.toLowerCase().includes(s.title.toLowerCase())
+          );
+          if (match) {
+            setAcademyName(match.title);
+            setCustomAcademy(false);
+          } else {
+            setAcademyName(data.academyName);
+            setCustomAcademy(true);
+          }
         }
-        if (data.date && !date) {
+        if (data.date) {
           setDate(data.date);
         }
         if (data.note) {
@@ -168,16 +203,7 @@ function NewHomeworkContent() {
               disabled={extracting}
               className="flex-1 py-2.5 bg-violet-500 text-white rounded-xl text-sm font-medium disabled:opacity-50 active:bg-violet-600 flex items-center justify-center gap-1.5"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                 <circle cx="12" cy="13" r="4" />
               </svg>
@@ -194,16 +220,7 @@ function NewHomeworkContent() {
               disabled={extracting}
               className="flex-1 py-2.5 bg-white text-violet-600 border border-violet-200 rounded-xl text-sm font-medium disabled:opacity-50 active:bg-violet-50 flex items-center justify-center gap-1.5"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
                 <circle cx="8.5" cy="8.5" r="1.5" />
                 <polyline points="21 15 16 10 5 21" />
@@ -212,7 +229,6 @@ function NewHomeworkContent() {
             </button>
           </div>
 
-          {/* 추출 중 로딩 */}
           {extracting && (
             <div className="mt-3 flex items-center gap-2 justify-center py-3">
               <div className="w-5 h-5 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
@@ -222,14 +238,12 @@ function NewHomeworkContent() {
             </div>
           )}
 
-          {/* 에러 */}
           {extractError && (
             <p className="mt-2 text-xs text-red-500 text-center">
               {extractError}
             </p>
           )}
 
-          {/* 미리보기 */}
           {previewUrl && (
             <div className="mt-3 relative rounded-xl overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -268,18 +282,68 @@ function NewHomeworkContent() {
             />
           </div>
 
-          {/* 학원 이름 */}
+          {/* 학원 선택 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              학원 이름
+              학원 선택
             </label>
-            <input
-              type="text"
-              value={academyName}
-              onChange={(e) => setAcademyName(e.target.value)}
-              placeholder="예: 잉글리시 부띠끄"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            {academyOptions.length > 0 ? (
+              <>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {academyOptions.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => handleAcademySelect(s.title)}
+                      className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors border ${
+                        !customAcademy && academyName === s.title
+                          ? "border-blue-500 bg-blue-50 text-blue-700"
+                          : "border-gray-200 bg-white text-gray-600 active:bg-gray-50"
+                      }`}
+                      style={
+                        !customAcademy && academyName === s.title
+                          ? { borderColor: s.color, backgroundColor: `${s.color}15`, color: s.color }
+                          : undefined
+                      }
+                    >
+                      <span
+                        className="inline-block w-2 h-2 rounded-full mr-1.5"
+                        style={{ backgroundColor: s.color }}
+                      />
+                      {s.title}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => handleAcademySelect("__custom__")}
+                    className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors border ${
+                      customAcademy
+                        ? "border-blue-500 bg-blue-50 text-blue-700"
+                        : "border-dashed border-gray-300 bg-white text-gray-400 active:bg-gray-50"
+                    }`}
+                  >
+                    + 직접 입력
+                  </button>
+                </div>
+                {customAcademy && (
+                  <input
+                    type="text"
+                    value={academyName}
+                    onChange={(e) => setAcademyName(e.target.value)}
+                    placeholder="학원 이름을 입력하세요"
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                )}
+              </>
+            ) : (
+              <input
+                type="text"
+                value={academyName}
+                onChange={(e) => setAcademyName(e.target.value)}
+                placeholder="예: 잉글리시 부띠끄"
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            )}
           </div>
 
           {/* 메모 (시험 등) */}
