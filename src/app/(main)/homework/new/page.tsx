@@ -1,12 +1,59 @@
 "use client";
 
-import { Suspense, useState, useRef, useMemo } from "react";
+import { Suspense, useState, useEffect, useRef, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useFamily } from "@/context/FamilyContext";
 import { useAuth } from "@/context/AuthContext";
 import { useSchedules } from "@/hooks/useSchedules";
-import { createHomework } from "@/lib/firebase/firestore";
+import {
+  createHomework,
+  subscribeAllHomework,
+} from "@/lib/firebase/firestore";
 import { getDateString } from "@/lib/utils/date";
+
+// 이미지를 base64로 변환하면서 리사이즈 (긴 변 max 1600px, JPEG 0.85 품질)
+function resizeImageToBase64(
+  file: File,
+  maxSize = 1600,
+  quality = 0.85
+): Promise<{ base64: string; mimeType: string }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        let { width, height } = img;
+        // 리사이즈 비율 계산
+        if (width > maxSize || height > maxSize) {
+          if (width > height) {
+            height = Math.round((height * maxSize) / width);
+            width = maxSize;
+          } else {
+            width = Math.round((width * maxSize) / height);
+            height = maxSize;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Canvas context unavailable"));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        // JPEG로 변환 (HEIC/PNG 모두 호환)
+        const dataUrl = canvas.toDataURL("image/jpeg", quality);
+        const base64 = dataUrl.split(",")[1];
+        resolve({ base64, mimeType: "image/jpeg" });
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function NewHomeworkPage() {
   return (
@@ -29,16 +76,42 @@ function NewHomeworkContent() {
   const { user } = useAuth();
   const { schedules } = useSchedules(family?.id);
 
-  // 학원 타입 스케줄만 추출 (중복 제거)
-  const academyOptions = useMemo(() => {
-    const academySchedules = schedules.filter((s) => s.type === "academy");
-    const seen = new Set<string>();
-    return academySchedules.filter((s) => {
-      if (seen.has(s.title)) return false;
-      seen.add(s.title);
-      return true;
+  // 기존 숙제의 학원명도 가져오기
+  const [homeworkAcademies, setHomeworkAcademies] = useState<string[]>([]);
+  useEffect(() => {
+    if (!family?.id) return;
+    const unsub = subscribeAllHomework(family.id, (list) => {
+      const names = Array.from(new Set(list.map((hw) => hw.academyName)));
+      setHomeworkAcademies(names);
     });
-  }, [schedules]);
+    return () => unsub();
+  }, [family?.id]);
+
+  // 학원 옵션: 학원 스케줄 + 기존 숙제 학원명 합치기 (중복 제거)
+  const academyOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const result: { key: string; title: string; color: string }[] = [];
+
+    // 학원 스케줄 먼저 (색상 있음)
+    schedules
+      .filter((s) => s.type === "academy")
+      .forEach((s) => {
+        if (!seen.has(s.title)) {
+          seen.add(s.title);
+          result.push({ key: s.id, title: s.title, color: s.color });
+        }
+      });
+
+    // 기존 숙제 학원명 (색상 없으면 기본색)
+    homeworkAcademies.forEach((name) => {
+      if (!seen.has(name)) {
+        seen.add(name);
+        result.push({ key: `hw-${name}`, title: name, color: "#A78BFA" });
+      }
+    });
+
+    return result;
+  }, [schedules, homeworkAcademies]);
 
   const today = getDateString(new Date());
   const [date, setDate] = useState(searchParams.get("date") || today);
@@ -74,63 +147,75 @@ function NewHomeworkContent() {
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
 
-    // base64 변환
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64Full = reader.result as string;
-      const base64 = base64Full.split(",")[1];
-      const mimeType = file.type || "image/jpeg";
+    setExtracting(true);
+    setExtractError("");
 
-      setExtracting(true);
-      setExtractError("");
+    try {
+      // 이미지 리사이즈 (모바일 5MB 사진을 ~500KB로 압축)
+      const { base64, mimeType } = await resizeImageToBase64(file);
 
-      try {
-        const res = await fetch("/api/extract-homework", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image: base64, mimeType }),
-        });
+      const res = await fetch("/api/extract-homework", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: base64, mimeType }),
+      });
 
-        const data = await res.json();
+      const data = await res.json();
 
-        if (!res.ok) {
-          setExtractError(data.error || "추출에 실패했습니다.");
-          return;
-        }
-
-        // 추출된 데이터로 폼 채우기
-        if (data.academyName && !academyName) {
-          // AI가 추출한 이름이 기존 학원 목록에 있는지 확인
-          const match = academyOptions.find(
-            (s) =>
-              s.title.toLowerCase().includes(data.academyName.toLowerCase()) ||
-              data.academyName.toLowerCase().includes(s.title.toLowerCase())
-          );
-          if (match) {
-            setAcademyName(match.title);
-            setCustomAcademy(false);
-          } else {
-            setAcademyName(data.academyName);
-            setCustomAcademy(true);
-          }
-        }
-        if (data.date) {
-          setDate(data.date);
-        }
-        if (data.note) {
-          setNote(data.note);
-        }
-        if (data.items && Array.isArray(data.items)) {
-          const newItems = data.items.join("\n");
-          setItemsText((prev) => (prev ? prev + "\n" + newItems : newItems));
-        }
-      } catch {
-        setExtractError("네트워크 오류가 발생했습니다.");
-      } finally {
-        setExtracting(false);
+      if (!res.ok) {
+        console.error("Extract failed:", data);
+        setExtractError(data.error || "추출에 실패했습니다.");
+        return;
       }
-    };
-    reader.readAsDataURL(file);
+
+      // 추출 결과가 비어있는지 확인
+      const hasContent =
+        data.academyName ||
+        data.date ||
+        data.note ||
+        (data.items && data.items.length > 0);
+
+      if (!hasContent) {
+        setExtractError(
+          "사진에서 숙제를 찾을 수 없습니다. 더 선명한 사진으로 다시 시도해주세요."
+        );
+        return;
+      }
+
+      // 추출된 데이터로 폼 채우기
+      if (data.academyName && !academyName) {
+        // AI가 추출한 이름이 기존 학원 목록에 있는지 확인
+        const match = academyOptions.find(
+          (s) =>
+            s.title.toLowerCase().includes(data.academyName.toLowerCase()) ||
+            data.academyName.toLowerCase().includes(s.title.toLowerCase())
+        );
+        if (match) {
+          setAcademyName(match.title);
+          setCustomAcademy(false);
+        } else {
+          setAcademyName(data.academyName);
+          setCustomAcademy(true);
+        }
+      }
+      if (data.date) {
+        setDate(data.date);
+      }
+      if (data.note) {
+        setNote(data.note);
+      }
+      if (data.items && Array.isArray(data.items) && data.items.length > 0) {
+        const newItems = data.items.join("\n");
+        setItemsText((prev) => (prev ? prev + "\n" + newItems : newItems));
+      }
+    } catch (err) {
+      console.error("Image processing error:", err);
+      setExtractError(
+        err instanceof Error ? err.message : "이미지 처리 중 오류가 발생했습니다."
+      );
+    } finally {
+      setExtracting(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -292,7 +377,7 @@ function NewHomeworkContent() {
                 <div className="flex flex-wrap gap-2 mb-2">
                   {academyOptions.map((s) => (
                     <button
-                      key={s.id}
+                      key={s.key}
                       type="button"
                       onClick={() => handleAcademySelect(s.title)}
                       className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors border ${
