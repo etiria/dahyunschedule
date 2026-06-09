@@ -234,6 +234,154 @@
 
 ---
 
+# 부록 A. 조작적 정의 코드북 (Codebook)
+
+> **표기 규칙**: ATC·ICD-10·중증등록 V코드는 표준코드로 그대로 사용 가능. **한국 NHIS EDI 약가/수가 코드(`[EDI]`)와 검사 수가코드(`[수가]`)는 추출 단계에서 각 성분·시술에 매핑**해야 하며, 본 문서에서는 임의로 채우지 않는다(미검증 코드 기재 금지). **ATC L04는 2024–2025 대규모 개정으로 하위분류가 변경**되었으므로 사용 자료기간에 맞는 ATC 버전으로 재확인할 것.
+
+## A.1 노출 — 면역억제제 (성분 / ATC / 비고)
+
+| 계열 | 성분 | ATC | EDI |
+|---|---|---|---|
+| 전신스테로이드 | prednisolone | H02AB06 | `[EDI]` |
+| | methylprednisolone | H02AB04 | `[EDI]` |
+| | dexamethasone | H02AB02 | `[EDI]` |
+| | deflazacort | H02AB13 | `[EDI]` |
+| 항대사 | methotrexate | L04AX03 (종양 L01BA01) | `[EDI]` |
+| | azathioprine | L04AX01 | `[EDI]` |
+| | mercaptopurine | L01BB02 | `[EDI]` |
+| | mycophenolate mofetil/Na | L04AA06 | `[EDI]` |
+| 칼시뉴린억제제 | ciclosporin | L04AD01 | `[EDI]` |
+| | tacrolimus | L04AD02 | `[EDI]` |
+| mTOR | sirolimus / everolimus | L04AA10 / L04AA18 | `[EDI]` |
+| TNF억제제 | infliximab / adalimumab / etanercept / golimumab / certolizumab | L04AB02 / 04 / 01 / 06 / 05 | `[EDI]` |
+| 기타 생물학제제 | ustekinumab / vedolizumab | L04AC05 / L04AA33 | `[EDI]` |
+| JAK억제제 | tofacitinib / baricitinib / upadacitinib | L04AA29 / L04AA37 / L04AF03 | `[EDI]` |
+
+- **신규사용자**: index 이전 **365일 무처방(washout)**.
+- **노출 episode**: 처방 투약일수 + **grace 60일**(민감도: 30/90일)로 연속화. 갭 > grace 시 중단.
+- **스테로이드 누적용량**: 각 조제를 **프레드니솔론 환산 mg**으로 변환 후 노출창에서 합산 → 범주화(예: <1g / 1–<5g / ≥5g). (환산비 예: prednisolone 5 = methylprednisolone 4 = dexamethasone 0.75 mg.)
+- *주의*: ATC 2025 개정에서 TNF억제제·JAK억제제 분류가 이동 → 코드 재검증 필수.
+
+## A.2 노출 — H. pylori 제균 (Park CH 2023 알고리즘)
+
+- **제균 = 단일 처방에 PPI/P-CAB + 적격 항생제 2종 동시** 포함. 1차/2차는 ≥28일 간격으로 구분.
+
+| 구성요소 | 성분 (ATC) | EDI |
+|---|---|---|
+| PPI | omeprazole A02BC01 · lansoprazole A02BC03 · pantoprazole A02BC02 · rabeprazole A02BC04 · esomeprazole A02BC05 | `[EDI]` |
+| P-CAB | tegoprazan · vonoprazan (A02BC) | `[EDI]` |
+| 항생제 | amoxicillin J01CA04 · clarithromycin J01FA09 · metronidazole P01AB01 · tetracycline J01AA07 · levofloxacin J01MA12 · moxifloxacin J01MA14 · rifabutin J04AB04 | `[EDI]` |
+| 비스무트 | bismuth A02BX05 | `[EDI]` |
+
+- **적격 레지멘**: ①PPI+AMX+CLR ②PPI+AMX+MTZ ③PPI+MTZ+TET ④PPI+AMX+LVX ⑤PPI+AMX+MXF ⑥PPI+AMX+rifabutin + 비스무트 4제(PPI+bismuth+TET+MTZ) + 순차/동시요법 변형.
+- **제균 성공(선택적 노출정의)**: 치료 후 **21일~6개월** 확인검사 시행 + 구제요법 없음. 단 2차 성공판정 특이도 낮음(54.8%) → 민감도분석에만 사용 권고.
+
+| 확인검사 | 코드 |
+|---|---|
+| 요소호기검사(UBT) / 대변항원 / 신속요소분해효소(CLO) / 조직검사 | `[수가]` |
+
+## A.3 결과 — 위(선)암 (incident)
+
+| 항목 | 코드 |
+|---|---|
+| 위암 진단 | ICD-10 **C16.0–C16.9** |
+| 중증(암)등록 본인부담경감 | **V193**(+ V194) |
+| 위절제/내시경절제 시술 | 위전절제·아전절제·ESD/EMR `[수가]` |
+| (선택) 상피내암 | D00.2 |
+
+- **incident 정의**: (C16 외래 ≥3 또는 입원 ≥1, 1년 이내) **AND** V193 등록 — 검증 민감도 96.0%/PPV 94.1% ([Yang 2022](https://pmc.ncbi.nlm.nih.gov/articles/PMC9016317/)).
+- **look-back 2년** 내 C16/타 악성(C00–C97, 비흑색종피부암 제외) 기왕 시 제외. 위 림프종(MALT, C88/C83 등)은 **결과에서 제외**(선암만).
+
+## A.4 공변량 코드
+
+| 영역 | 변수 / 코드 |
+|---|---|
+| 인구학 | 연령, 성, 소득분위, 거주지(자격 DB) |
+| 검진(HEALS) | BMI, 흡연, 음주, 공복혈당, 총콜레스테롤 |
+| 위 전구병변 | 위축성위염 **K29.4**, 만성위염 K29.5, 장상피화생(코드 불명확—병리/검진기록 보조) |
+| 소화성궤양 | 위궤양 **K25**, 십이지장 K26, GI출혈 K92 |
+| 동반질환 | Charlson 구성 ICD-10, 당뇨 E10–E14, CKD N18, 간질환 K70–K77 |
+| 자가면역 적응증 | RA M05–M06, IBD K50–K51, SLE M32, 건선 L40, 강직성척추염 M45 |
+| 병용약 | PPI A02BC, NSAID M01A, aspirin B01AC06, 항혈전제 B01A |
+| 의료이용/검출 | 내시경(상부위장관) 수검 빈도 `[수가]`, 외래·입원 횟수 |
+
+---
+
+# 부록 B. 표본수·검정력 시뮬레이션 (정밀화)
+
+## B.1 닫힌형(Schoenfeld) 1차 산정 — 필요 **사건수**
+
+Cox 로그순위 기준 필요 사건수
+$$D=\frac{(z_{1-\alpha/2}+z_{1-\beta})^2}{p_1 p_2 (\ln \text{HR})^2}$$
+(α=0.05 양측, power=0.80, p₁·p₂=노출군 배정비율)
+
+| HR | 배정 1:1 (p₁p₂=0.25) | 배정 1:2 (제균:비제균, p₁p₂=0.222) | 배정 1:3 (0.1875) |
+|---|---|---|---|
+| 0.50 | **65** 사건 | 74 | 87 |
+| 0.60 | **120** | 135 | 160 |
+| 0.70 | **247** | 278 | 329 |
+| 0.80 | 561 | 631 | 748 |
+
+## B.2 사건수 → 필요 **표본수**(코호트 규모)
+
+전체 평균 위암 누적발생률(가중)을 가정해 N ≈ D / (평균 사건확률). 면역억제군 추적 8–10년 비제균군 누적발생을 시나리오로 둠.
+
+| 시나리오(비제균 10년 누적발생) | 평균 사건확률* | HR 0.6 검출 N (1:2) | HR 0.7 검출 N (1:2) |
+|---|---|---|---|
+| 보수(1.0%) | ~0.85% | ≈ 15,900 | ≈ 32,700 |
+| 기본(2.0%) | ~1.7% | ≈ 7,900 | ≈ 16,400 |
+| 고위험(이식 등, 3.0%) | ~2.55% | ≈ 5,300 | ≈ 10,900 |
+
+\* 평균 사건확률 = (1·비제균발생 + 2·제균발생)/3, 제균발생=HR×비제균발생 근사. → **NHIS 전국민/대규모 코호트(수만~수십만)면 HR 0.6은 모든 시나리오에서, HR 0.7도 기본·고위험 시나리오에서 검정력 확보.** 검진코호트(HEALS, 면역억제 신규자 부분집합)만으로는 부족할 수 있어 **맞춤형 NHID 권고**.
+
+## B.3 실행 가능한 검정력 시뮬레이션 스크립트 (R)
+
+```r
+# H. pylori 제균 × 면역억제 코호트 — Cox 검정력 시뮬레이션
+# 닫힌형(powerSurvEpi) + 사건기반 시뮬레이션 두 가지 제공
+install.packages(c("powerSurvEpi","survival"))  # 최초 1회
+library(powerSurvEpi); library(survival)
+
+## (1) 닫힌형: 사건수 기반 검정력 (Schoenfeld)
+needed_events <- function(HR, alloc=c(1,2), alpha=0.05, power=0.8){
+  p1 <- alloc[1]/sum(alloc); p2 <- 1-p1
+  z  <- qnorm(1-alpha/2) + qnorm(power)
+  ceiling(z^2 / (p1*p2*log(HR)^2))
+}
+sapply(c(0.5,0.6,0.7,0.8), needed_events, alloc=c(1,2))
+
+## (2) 표본수 → 검정력 (지수생존 가정 시뮬레이션)
+sim_power <- function(N, frac_erad=1/3, HR=0.6,
+                      base_cuminc10=0.02, accrual=3, maxfu=10,
+                      nsim=1000, alpha=0.05){
+  base_rate <- -log(1-base_cuminc10)/10           # 비제균 위험률(/년)
+  hits <- replicate(nsim, {
+    erad <- rbinom(N,1,frac_erad)
+    rate <- base_rate*ifelse(erad==1,HR,1)
+    t_event <- rexp(N, rate)
+    entry   <- runif(N,0,accrual)                  # 시차등록
+    t_cens  <- pmin(maxfu, maxfu+accrual-entry)    # 행정적 중도절단
+    time <- pmin(t_event,t_cens); status <- as.integer(t_event<=t_cens)
+    fit <- coxph(Surv(time,status)~erad)
+    summary(fit)$coefficients[1,"Pr(>|z|)"] < alpha
+  })
+  mean(hits)
+}
+# 예: 기본 시나리오에서 N=8000, HR 0.6 검정력
+set.seed(1); sim_power(N=8000, HR=0.6, base_cuminc10=0.02)
+
+## (3) 경쟁위험(사망) 반영이 필요하면 cmprsk::crr 로 동일 시뮬레이션 확장
+## (4) 효과수정(면역억제×제균) 검정력은 상호작용항 계수로 별도 시뮬레이션
+```
+
+## B.4 검정력 산정 시 주의
+- **사건수(D)가 검정력을 결정** — 표본수보다 추적기간·기저발생률이 핵심. 추적 ≥8–10년 확보 권장.
+- **경쟁위험(사망)**: 고령·이식군은 사망 경쟁이 커 실제 위암 사건이 줄어듦 → Fine-Gray 기반 시뮬레이션으로 보정 산정.
+- **효과수정(면역억제×제균 상호작용)** 검정은 주효과보다 **3–4배 큰 표본**이 필요 → 전국민 규모 필수.
+- **노출 분율**(제균군 비율)이 작을수록 N 급증 → 실제 자료의 제균 시행률 확인 후 재산정.
+
+---
+
 ### 주요 출처 (대표)
 - 일반인구 제균-위암: [Cochrane 2020](https://pmc.ncbi.nlm.nih.gov/articles/PMC7389270/), [Lee 2016](https://pubmed.ncbi.nlm.nih.gov/26836587/), [Shandong/BMJ 2019](https://pmc.ncbi.nlm.nih.gov/articles/PMC6737461/), [Choi NEJM 2018](https://pubmed.ncbi.nlm.nih.gov/29562147/)·[2020](https://pubmed.ncbi.nlm.nih.gov/31995688/), [대만 Matsu/Gut 2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC7815911/)
 - 면역억제·이식 발암: [Engels JAMA 2011](https://pubmed.ncbi.nlm.nih.gov/22045767/), [Wang Oncotarget 2018](https://www.oncotarget.com/article/23841/text/), [Jeong Sci Rep 2020](https://pmc.ncbi.nlm.nih.gov/articles/PMC7722878/)
