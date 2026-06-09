@@ -165,6 +165,75 @@
 
 ---
 
+# PART 3. STROBE / RECORD-PE 체크리스트 세부화
+
+> 본 연구는 일상수집(청구) 자료를 이용한 약물역학 코호트이므로 **STROBE**(관찰연구 보고지침, 22항목)에 더해 **RECORD**(routinely collected data)와 **RECORD-PE**(pharmacoepidemiology 확장)를 함께 준수한다. 아래는 항목별로 본 연구에서 *어떻게 기술·보고할지*를 사전 명시한 것이다(원고 작성 시 그대로 매핑).
+
+## 3.1 STROBE 핵심 항목별 기술 계획
+
+| # | STROBE 항목 | 본 연구의 사전 기술 내용 |
+|---|---|---|
+| **1a** | 제목·초록에 설계 명시 | 제목/초록에 "후향적 코호트(retrospective cohort, new-user active-comparator)" 명시 |
+| **1b** | 구조화 초록 | 배경·목적·설계·자료원·대상·노출·결과·주요결과(HR, 95% CI)·결론 순 구조화 |
+| **2** | 배경/근거 | PART 1 요약: 일반인구 제균-위암 근거 확립 vs 면역억제군 근거 공백 |
+| **3** | 목적/가설 | 사전명시 가설 H1(제균군 위암 HR<1) + 효과수정(면역억제 유무·종류) |
+| **4** | 연구설계 | new-user, active-comparator, target trial emulation 프레임 |
+| **5** | 세팅 | 한국 NHIS(검진코호트 HEALS 또는 맞춤형 NHID), 자료기간(예: 2004–2021 노출, 2023까지 추적), 모집·추적·자료수집 기간 명시 |
+| **6a** | 대상자 적격기준·선정 | 포함/제외(아래 3.3), index date 정의 |
+| **6b** | 매칭 기준(해당 시) | PS 매칭 비율(1:n)·캘리퍼·매칭 변수 명시 |
+| **7** | 변수 | 노출(제균), 결과(위암 C16), 교란·효과수정·예측인자 사전 정의(코드북 부록) |
+| **8** | 자료원/측정 | 진단(ICD-10)·약제(EDI↔ATC)·검진(생체·생활습관)·사망·중증등록(V코드) 출처별 명시, 비교군간 측정 동일성 |
+| **9** | 비뚤림 | immortal time·detection/surveillance·confounding by indication·노출오분류 각각의 대응(PART 2.7) |
+| **10** | 표본수 | 사전 검정력 산정 근거(2.6) 또는 가용 전수 사용 사유 + 사후 정밀도 |
+| **11** | 양적 변수 처리 | 연령·누적 스테로이드용량(프레드니솔론 환산 g) 범주화 방식과 근거, 선형성 검토 |
+| **12a** | 통계방법 | 시간의존 Cox + landmark, 공변량 보정 |
+| **12b** | 부집단/상호작용 | 면역억제 종류·강도·기간, 일반인구 대비 상호작용항 |
+| **12c** | 결측치 처리 | 검진 공변량 결측 → 다중대치(MI) 또는 결측지표, 민감도분석 |
+| **12d** | 추적/탈락·손실 | 사망·이민·자격상실에 의한 censoring 규칙 |
+| **12e** | 민감도분석 | lag 1–3년, 제균 정의(성공한정), washout/grace 길이, V코드 유무, 음성대조결과 |
+| **13** | 참여자 흐름 | **CONSORT식 flow diagram**(적격→제외사유별 n→최종 코호트→매칭 후 n) |
+| **14** | 기술통계 | 매칭 전후 군별 특성표 + **표준화 평균차(SMD<0.1)**로 균형 제시 |
+| **15** | 결과 수 | 군별 사건수·person-years·조발생률(per 100,000 PY) |
+| **16** | 주 결과 | 보정 HR(95% CI), 경쟁위험 SHR 병행, 보정 전/후 모두 제시 |
+| **17** | 기타분석 | 부집단·상호작용·민감도 결과 |
+| **18–20** | 해석/한계/일반화 | 핵심결과 요약, 비뚤림 방향·크기 논의, 동아시아 외 일반화 한계 |
+| **21** | 자금원 | 자금·역할·이해상충 명시 |
+
+## 3.2 RECORD / RECORD-PE 확장 항목 (일상수집·약물역학 특이)
+
+| 항목 | 본 연구 기술 계획 |
+|---|---|
+| **RECORD 1.1** 자료원 명시(초록) | 초록에 "NHIS 청구·검진 연계자료" 명시 |
+| **RECORD 6.1** 코드 목록 공개 | 노출·결과·공변량 정의에 사용한 **모든 코드(ICD-10, EDI/ATC, 시술, V코드) 전체 목록을 부록/보충자료로 공개** |
+| **RECORD 6.2** 코드 검증 | 위암 정의(C16+V193) 검증성능(민감도 96.0%/PPV 94.1%, [Yang 2022](https://pmc.ncbi.nlm.nih.gov/articles/PMC9016317/)), 제균 정의 검증(민감도 99.7%, [Park 2023](https://pmc.ncbi.nlm.nih.gov/articles/PMC10477078/)) 인용 |
+| **RECORD 6.3** 인구집단 선정 다이어그램 | 원자료→적격→분석 코호트 흐름도(각 단계 n) |
+| **RECORD 7.1** 변수–자료원 매핑 | 각 변수가 어느 DB(자격/진료/검진/사망/장기요양)에서 도출됐는지 명시 |
+| **RECORD 12.1** 연계 품질 | NHIS 내부키 연계(고유개인키) 및 검진코호트–청구–사망 연계 완전성 기술 |
+| **RECORD 13.1** 비참여/누락 | 자비진료·OTC·미청구로 인한 미포착 가능성 |
+| **RECORD-PE 6.1** 노출 정의 상세 | 약제 식별(성분/ATC), **노출기간 정의**(처방일수+grace), 신규사용자 washout, **노출시점(index)** 정의 |
+| **RECORD-PE 6.2** 노출-위험기간 정렬 | as-treated vs intention-to-treat 노출분류, **시간의존 모델링** 명시 |
+| **RECORD-PE 6.3** 비교군 | active-comparator(제균 vs 비제균) 선택 근거, confounding by indication 통제 논리 |
+| **RECORD-PE 7.1** 결과 정의·검증 | 위암 incident 정의·look-back·검증 알고리즘 |
+| **RECORD-PE 12.1** 시간 관련 비뚤림 | immortal time(landmark/시간의존), latency(lag window), depletion of susceptibles 대응 명시 |
+
+## 3.3 사전 명시 적격기준 (Eligibility, target trial emulation 기준)
+
+- **포함**: 연구기간 중 면역억제제(ATC L04 등) **신규 개시** 성인(≥19세 또는 검진코호트 ≥40세). index = 면역억제 개시일(또는 emulated trial의 eligibility 충족일).
+- **제외**: index 이전 ① 위암/타 악성종양 기왕(2년 look-back), ② 위절제술력, ③ 자료 부족(가입 < washout+look-back), ④ 추적 < 최소기간.
+- **노출 분류 시점**: index 후 정의 구간 내 제균 처방 → 제균군(시간의존), landmark 시점까지 미제균 → 비제균군.
+- **추적 시작/종료**: 시작 = landmark 시점(또는 시간의존이면 index); 종료 = 위암 진단·사망·자격상실·자료종료 중 최초.
+
+## 3.4 보고 산출물 체크리스트 (원고 제출용)
+- [ ] STROBE 22항목 체크리스트(작성 위치 페이지 명시) 첨부
+- [ ] RECORD/RECORD-PE 체크리스트 첨부
+- [ ] 참여자 흐름도(Figure 1)
+- [ ] 전체 코드목록(Supplementary, 노출/결과/공변량)
+- [ ] 군별 특성표 + SMD(Table 1)
+- [ ] 주분석 + 경쟁위험 + 민감도분석(Table/Forest plot)
+- [ ] IRB 승인번호·자금·이해상충·데이터접근 진술
+
+---
+
 ### 주요 출처 (대표)
 - 일반인구 제균-위암: [Cochrane 2020](https://pmc.ncbi.nlm.nih.gov/articles/PMC7389270/), [Lee 2016](https://pubmed.ncbi.nlm.nih.gov/26836587/), [Shandong/BMJ 2019](https://pmc.ncbi.nlm.nih.gov/articles/PMC6737461/), [Choi NEJM 2018](https://pubmed.ncbi.nlm.nih.gov/29562147/)·[2020](https://pubmed.ncbi.nlm.nih.gov/31995688/), [대만 Matsu/Gut 2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC7815911/)
 - 면역억제·이식 발암: [Engels JAMA 2011](https://pubmed.ncbi.nlm.nih.gov/22045767/), [Wang Oncotarget 2018](https://www.oncotarget.com/article/23841/text/), [Jeong Sci Rep 2020](https://pmc.ncbi.nlm.nih.gov/articles/PMC7722878/)
