@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EGGIM 라벨링 도구</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --line: #2a2f3a; --fg: #e7e9ee;
+    --muted: #9aa3b2; --accent: #4c8dff; --good: #35c07f; --warn: #e5a13a; --bad: #e5533a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+         background: var(--bg); color: var(--fg); height: 100vh; overflow: hidden; }
+  #app { display: grid; grid-template-columns: 1fr 340px; grid-template-rows: auto 1fr auto; height: 100vh; }
+  header { grid-column: 1 / 3; display: flex; align-items: center; gap: 16px;
+           padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  header h1 { font-size: 15px; margin: 0; font-weight: 600; }
+  header .sp { flex: 1; }
+  button, label.btn { background: #232833; color: var(--fg); border: 1px solid var(--line);
+           border-radius: 8px; padding: 8px 12px; cursor: pointer; font-size: 13px; }
+  button:hover { border-color: var(--accent); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  #stage { position: relative; display: flex; align-items: center; justify-content: center;
+           background: #000; overflow: hidden; }
+  #stage img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  #stage .empty { color: var(--muted); text-align: center; padding: 40px; }
+  #meta { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,.6);
+          padding: 6px 10px; border-radius: 6px; font-size: 12px; color: var(--muted); }
+  aside { background: var(--panel); border-left: 1px solid var(--line); padding: 14px;
+          overflow-y: auto; }
+  .group { margin-bottom: 18px; }
+  .group h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .05em;
+              color: var(--muted); margin: 0 0 8px; }
+  .opts { display: flex; flex-direction: column; gap: 6px; }
+  .opt { display: flex; align-items: center; gap: 8px; text-align: left; }
+  .opt .key { font-family: ui-monospace, monospace; background: #2a2f3a; border-radius: 4px;
+              padding: 1px 7px; font-size: 12px; min-width: 20px; text-align: center; }
+  .opt.sel { border-color: var(--accent); background: #1d2740; }
+  .opt.sel.good { border-color: var(--good); background: #12331f; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  footer { grid-column: 1 / 3; display: flex; align-items: center; gap: 14px;
+           padding: 8px 16px; border-top: 1px solid var(--line); background: var(--panel);
+           font-size: 13px; color: var(--muted); }
+  .bar { flex: 1; height: 8px; background: #232833; border-radius: 4px; overflow: hidden; }
+  .bar > div { height: 100%; background: var(--good); width: 0; }
+  .pill { font-size: 12px; padding: 2px 8px; border-radius: 20px; background: #232833; }
+  kbd { font-family: ui-monospace, monospace; background: #2a2f3a; border-radius: 4px; padding: 1px 6px; }
+  a { color: var(--accent); }
+  .hint { font-size: 11px; color: var(--muted); line-height: 1.5; }
+  .disabled { opacity: .4; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>EGGIM 라벨링 도구</h1>
+    <label class="btn">📁 폴더 열기
+      <input id="dir" type="file" webkitdirectory directory multiple hidden>
+    </label>
+    <label class="btn">📄 CSV 이어서
+      <input id="resume" type="file" accept=".csv" hidden>
+    </label>
+    <span class="sp"></span>
+    <label class="hint"><input type="checkbox" id="autoadv" checked> 완료 시 자동 다음</label>
+    <label class="hint"><input type="checkbox" id="onlyunl"> 미라벨만</label>
+    <button id="export">💾 CSV 내보내기</button>
+  </header>
+
+  <section id="stage">
+    <div class="empty" id="emptyMsg">
+      <p><b>폴더 열기</b>로 내시경 이미지 폴더를 선택하세요.<br>
+      (하위 폴더 이름이 환자 ID가 됩니다. 이미지는 로컬에서만 처리됩니다.)</p>
+      <p class="hint">단축키 — 부위 <kbd>1</kbd>~<kbd>6</kbd> · IM등급 <kbd>7</kbd>/<kbd>8</kbd>/<kbd>9</kbd> ·
+      화질부적정 <kbd>0</kbd> · 이전/다음 <kbd>←</kbd>/<kbd>→</kbd> · 저장 <kbd>E</kbd></p>
+    </div>
+    <div id="meta"></div>
+  </section>
+
+  <aside>
+    <div class="group">
+      <h3>부위 (Site)</h3>
+      <div class="opts" id="siteOpts"></div>
+    </div>
+    <div class="group" id="gradeGroup">
+      <h3>IM 등급 (grade)</h3>
+      <div class="opts" id="gradeOpts"></div>
+      <p class="hint">0=없음 · 1=국소(≤30%) · 2=광범위(&gt;30%). ‘해당없음’·‘화질 부적정’이면 비워둡니다.</p>
+    </div>
+    <div class="group">
+      <h3>화질 (quality)</h3>
+      <div class="opts" id="qualOpts"></div>
+    </div>
+    <div class="group">
+      <h3>진행 현황</h3>
+      <div id="tally" class="hint"></div>
+    </div>
+  </aside>
+
+  <footer>
+    <span id="pos" class="pill">0 / 0</span>
+    <div class="bar"><div id="barFill"></div></div>
+    <span id="labeledCount" class="pill">라벨 0</span>
+    <button id="prev">← 이전</button>
+    <button id="next">다음 →</button>
+  </footer>
+</div>
+
+<script>
+// ---- schema (must match eggim/scaffold_manifest.py MANIFEST_COLUMNS) ----
+const COLUMNS = ["image_path","patient_id","seq_index","site","quality_ok","im_grade"];
+const SITES = [
+  {key:"1", value:"antrum_lesser",  label:"전정부 소만", scoring:true},
+  {key:"2", value:"antrum_greater", label:"전정부 대만", scoring:true},
+  {key:"3", value:"incisura",       label:"각부",        scoring:true},
+  {key:"4", value:"corpus_lesser",  label:"체부 소만",   scoring:true},
+  {key:"5", value:"corpus_greater", label:"체부 대만",   scoring:true},
+  {key:"6", value:"other",          label:"해당없음",    scoring:false},
+];
+const GRADES = [{key:"7",v:0,label:"0 · IM 없음"},{key:"8",v:1,label:"1 · 국소"},{key:"9",v:2,label:"2 · 광범위"}];
+
+let items = [];      // {image_path, patient_id, seq_index, file, url, site, quality_ok, im_grade}
+let idx = 0;
+let storeKey = null; // localStorage key for the current folder
+
+// ---- helpers ----
+const $ = s => document.querySelector(s);
+const isImg = n => /\.(jpe?g|png|bmp|tiff?)$/i.test(n);
+
+function patientOf(relPath, fileName) {
+  const parts = relPath.split("/");
+  if (parts.length >= 3) return parts[1];        // root/patient/img.jpg
+  const pre = fileName.split("_")[0];
+  return pre || "unknown";
+}
+
+function current() { return items[idx]; }
+
+function complete(it) {
+  if (!it.site) return false;
+  if (it.site === "other") return true;
+  if (it.quality_ok === 0) return true;          // inadequate -> no grade needed
+  return it.im_grade !== null && it.im_grade !== undefined && it.im_grade !== "";
+}
+
+// ---- persistence ----
+function save() {
+  if (!storeKey) return;
+  const lite = items.map(it => ({p:it.image_path, s:it.site, q:it.quality_ok, g:it.im_grade}));
+  try { localStorage.setItem(storeKey, JSON.stringify(lite)); } catch(e){}
+}
+function restore() {
+  if (!storeKey) return;
+  try {
+    const raw = localStorage.getItem(storeKey);
+    if (!raw) return;
+    const map = new Map(JSON.parse(raw).map(o => [o.p, o]));
+    for (const it of items) {
+      const o = map.get(it.image_path);
+      if (o) { it.site = o.s ?? ""; it.quality_ok = o.q ?? 1; it.im_grade = o.g ?? ""; }
+    }
+  } catch(e){}
+}
+
+// ---- loading ----
+$("#dir").addEventListener("change", e => {
+  const files = [...e.target.files].filter(f => isImg(f.name));
+  if (!files.length) { alert("이미지 파일이 없습니다."); return; }
+  files.sort((a,b) => (a.webkitRelativePath||a.name).localeCompare(b.webkitRelativePath||b.name));
+  const seqByPatient = {};
+  items = files.map(f => {
+    const rel = f.webkitRelativePath || f.name;
+    const pid = patientOf(rel, f.name);
+    const seq = (seqByPatient[pid] = (seqByPatient[pid] ?? -1) + 1);
+    return { image_path: rel, patient_id: pid, seq_index: seq, file: f, url: null,
+             site: "", quality_ok: 1, im_grade: "" };
+  });
+  const root = (files[0].webkitRelativePath||"").split("/")[0] || "folder";
+  storeKey = "eggim_labels::" + root + "::" + items.length;
+  restore();
+  idx = 0;
+  render();
+});
+
+$("#resume").addEventListener("change", e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { applyCsv(r.result); render(); };
+  r.readAsText(f);
+});
+
+function applyCsv(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (!lines.length) return;
+  const head = lines[0].split(",").map(s => s.trim());
+  const col = name => head.indexOf(name);
+  const byPath = new Map(items.map(it => [it.image_path, it]));
+  let n = 0;
+  for (let i = 1; i < lines.length; i++) {
+    const c = lines[i].split(",");
+    const it = byPath.get((c[col("image_path")]||"").trim());
+    if (!it) continue;
+    it.site = (c[col("site")]||"").trim();
+    const q = (c[col("quality_ok")]||"").trim(); it.quality_ok = q === "" ? 1 : (q==="1"?1:0);
+    const g = (c[col("im_grade")]||"").trim(); it.im_grade = g === "" ? "" : parseInt(g,10);
+    n++;
+  }
+  save();
+  alert(n + "개 이미지의 라벨을 불러왔습니다.");
+}
+
+// ---- rendering ----
+function buildPanels() {
+  $("#siteOpts").innerHTML = SITES.map(s =>
+    `<button class="opt" data-site="${s.value}"><span class="key">${s.key}</span>${s.label}</button>`).join("");
+  $("#gradeOpts").innerHTML = GRADES.map(g =>
+    `<button class="opt" data-grade="${g.v}"><span class="key">${g.key}</span>${g.label}</button>`).join("");
+  $("#qualOpts").innerHTML =
+    `<button class="opt" data-qual="1"><span class="key">·</span>적정 (기본)</button>` +
+    `<button class="opt" data-qual="0"><span class="key">0</span>부적정 (흐림/거품/부적절)</button>`;
+  $("#siteOpts").querySelectorAll("[data-site]").forEach(b =>
+    b.onclick = () => setSite(b.dataset.site));
+  $("#gradeOpts").querySelectorAll("[data-grade]").forEach(b =>
+    b.onclick = () => setGrade(parseInt(b.dataset.grade,10)));
+  $("#qualOpts").querySelectorAll("[data-qual]").forEach(b =>
+    b.onclick = () => setQuality(parseInt(b.dataset.qual,10)));
+}
+
+function render() {
+  const it = current();
+  $("#emptyMsg").style.display = items.length ? "none" : "block";
+  const stageImg = $("#stage img");
+  if (stageImg) stageImg.remove();
+  if (it) {
+    if (!it.url) it.url = URL.createObjectURL(it.file);
+    const img = document.createElement("img");
+    img.src = it.url;
+    $("#stage").insertBefore(img, $("#meta"));
+    $("#meta").textContent = `${it.patient_id}  ·  #${it.seq_index}  ·  ${it.image_path}`;
+  } else {
+    $("#meta").textContent = "";
+  }
+  // selection states
+  $("#siteOpts").querySelectorAll("[data-site]").forEach(b =>
+    b.classList.toggle("sel", it && it.site === b.dataset.site));
+  const scoring = it && SITES.find(s => s.value === it.site)?.scoring;
+  $("#gradeGroup").classList.toggle("disabled", !(scoring && it.quality_ok === 1));
+  $("#gradeOpts").querySelectorAll("[data-grade]").forEach(b =>
+    b.classList.toggle("sel", it && String(it.im_grade) === b.dataset.grade));
+  $("#qualOpts").querySelectorAll("[data-qual]").forEach(b => {
+    const on = it && it.quality_ok === parseInt(b.dataset.qual,10);
+    b.classList.toggle("sel", on);
+    b.classList.toggle("good", on && b.dataset.qual === "1");
+  });
+  // footer
+  const labeled = items.filter(complete).length;
+  $("#pos").textContent = `${items.length ? idx+1 : 0} / ${items.length}`;
+  $("#labeledCount").textContent = `라벨 ${labeled}`;
+  $("#barFill").style.width = items.length ? (100*labeled/items.length)+"%" : "0";
+  // tally
+  const t = {};
+  for (const s of SITES) t[s.value] = 0;
+  items.forEach(i => { if (i.site) t[i.site] = (t[i.site]||0)+1; });
+  $("#tally").innerHTML = SITES.map(s => `${s.label}: <b>${t[s.value]||0}</b>`).join(" &nbsp;·&nbsp; ")
+    + `<br>미라벨: <b>${items.length - labeled}</b>`;
+}
+
+// ---- label setters ----
+function setSite(v) {
+  const it = current(); if (!it) return;
+  it.site = v;
+  if (v === "other") { it.im_grade = ""; }
+  afterEdit();
+}
+function setGrade(v) {
+  const it = current(); if (!it) return;
+  const s = SITES.find(x => x.value === it.site);
+  if (!s || !s.scoring || it.quality_ok !== 1) return;
+  it.im_grade = v; afterEdit();
+}
+function setQuality(v) {
+  const it = current(); if (!it) return;
+  it.quality_ok = v;
+  if (v === 0) it.im_grade = "";
+  afterEdit();
+}
+function afterEdit() {
+  save(); render();
+  if ($("#autoadv").checked && complete(current())) setTimeout(next, 120);
+}
+
+// ---- navigation ----
+function go(d) {
+  if (!items.length) return;
+  let n = idx;
+  const onlyUnl = $("#onlyunl").checked;
+  do { n += d; } while (onlyUnl && n >= 0 && n < items.length && complete(items[n]));
+  if (n < 0 || n >= items.length) { if (onlyUnl) { alert("남은 미라벨 이미지가 없습니다."); return; } n = Math.max(0, Math.min(items.length-1, idx+d)); }
+  idx = n; render();
+}
+const next = () => go(1);
+const prev = () => go(-1);
+$("#next").onclick = next; $("#prev").onclick = prev;
+
+// ---- export ----
+function csvCell(v){ v = (v===null||v===undefined)?"":String(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+$("#export").onclick = () => {
+  if (!items.length) { alert("먼저 폴더를 여세요."); return; }
+  const rows = [COLUMNS.join(",")];
+  for (const it of items) {
+    rows.push([it.image_path, it.patient_id, it.seq_index, it.site,
+               it.site ? it.quality_ok : "", (it.im_grade===""?"":it.im_grade)].map(csvCell).join(","));
+  }
+  const blob = new Blob([rows.join("\n")], {type:"text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "eggim_labels.csv";
+  a.click();
+};
+
+// ---- keyboard ----
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT") return;
+  const k = e.key;
+  const site = SITES.find(s => s.key === k);
+  const grade = GRADES.find(g => g.key === k);
+  if (site) { setSite(site.value); e.preventDefault(); }
+  else if (grade) { setGrade(grade.v); e.preventDefault(); }
+  else if (k === "0") { setQuality(0); e.preventDefault(); }
+  else if (k === "ArrowRight" || k === " ") { next(); e.preventDefault(); }
+  else if (k === "ArrowLeft") { prev(); e.preventDefault(); }
+  else if (k === "e" || k === "E") { $("#export").click(); }
+});
+
+buildPanels();
+render();
+</script>
+</body>
+</html>

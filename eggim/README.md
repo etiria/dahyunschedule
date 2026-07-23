@@ -33,6 +33,7 @@
 | `eggim/data.py` | 데이터셋, **환자단위 분할**, 합성 매니페스트 | torch(선택) |
 | `eggim/train.py` | 두 모델 학습 루프 | torch |
 | `eggim/pipeline.py` | 폴더 → EGGIM end-to-end 추론 | torch |
+| `labeler/index.html` | **부위·화질·IM등급 라벨링 도구** (브라우저, 로컬 처리) | 없음 |
 | `demo.py` | GPU/torch 없이 전체 흐름 시연 | 표준 라이브러리 |
 | `tests/test_aggregate.py` | 집계 로직 단위테스트 (10건) | 표준 라이브러리 |
 
@@ -54,7 +55,7 @@ python3 demo.py                    # 200명 가상 코호트로 필터→등급�
 
 ```
 1) 매니페스트 스캐폴드   python -m eggim.scaffold_manifest /data/studies --out manifest.csv
-2) 시드 라벨링           환자 100~200명 × ~10장만 site/quality_ok 채우기 (~1,500~2,000장)
+2) 시드 라벨링           labeler/index.html 로 환자 100~200명 × ~10장 부위/화질 태깅 (~1,500~2,000장)
                          └ 부위는 순수 이미지 겉모습으로 판단 (촬영 순서는 환자마다 달라 신뢰 불가)
 3) 부위분류기 학습        python -m eggim.train site --manifest manifest.csv --out ckpt/site.pt
 4) 나머지 자동 사전분류    site 모델로 20만 장에 site/confidence 부여
