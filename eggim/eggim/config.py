@@ -34,6 +34,21 @@ EGGIM_SITES: List[str] = [
 NON_TARGET_SITE = "other"
 SITE_CLASSES: List[str] = EGGIM_SITES + [NON_TARGET_SITE]
 
+# Coarse anatomical region. Region (antrum vs incisura vs corpus) is visually
+# separable from a single frame; the lesser-vs-greater CURVATURE split inside a
+# region is the genuinely hard part. Grouping to region lets us measure how much
+# site-classifier error is "just" curvature confusion vs true region mistakes,
+# and supports a two-stage (region -> curvature) classifier if needed.
+REGIONS: List[str] = ["antrum", "incisura", "corpus", "other"]
+SITE_TO_REGION = {
+    "antrum_lesser": "antrum",
+    "antrum_greater": "antrum",
+    "incisura": "incisura",
+    "corpus_lesser": "corpus",
+    "corpus_greater": "corpus",
+    NON_TARGET_SITE: "other",
+}
+
 # IM grade labels for a single area.
 IM_GRADES: List[int] = [0, 1, 2]
 MAX_SITE_SCORE = 2

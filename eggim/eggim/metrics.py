@@ -10,6 +10,44 @@ from __future__ import annotations
 from typing import Sequence
 
 
+def site_error_breakdown(true_sites: Sequence[str], pred_sites: Sequence[str]) -> dict:
+    """Split site-classifier error into region errors vs curvature-only errors.
+
+    The key diagnostic for EGGIM: distinguishing antrum/incisura/corpus is easy,
+    but lesser-vs-greater curvature within a region is hard from a single frame.
+    Returns fine (5+other-way) accuracy, coarse (region) accuracy, and the share
+    of mistakes that are *only* curvature confusion (region correct, side wrong).
+    """
+    from .config import SITE_TO_REGION
+
+    n = len(true_sites)
+    if n == 0:
+        return {"n": 0}
+    fine_correct = region_correct = curvature_only_error = region_error = 0
+    for t, p in zip(true_sites, pred_sites):
+        if t == p:
+            fine_correct += 1
+            region_correct += 1
+            continue
+        tr, pr = SITE_TO_REGION.get(t, "other"), SITE_TO_REGION.get(p, "other")
+        if tr == pr:
+            region_correct += 1          # right region, wrong curvature
+            curvature_only_error += 1
+        else:
+            region_error += 1            # wrong region entirely
+    n_err = n - fine_correct
+    return {
+        "n": n,
+        "fine_accuracy": fine_correct / n,
+        "region_accuracy": region_correct / n,
+        "n_errors": n_err,
+        "curvature_only_errors": curvature_only_error,
+        "region_errors": region_error,
+        # of all mistakes, what fraction is merely lesser/greater confusion
+        "curvature_share_of_errors": (curvature_only_error / n_err) if n_err else 0.0,
+    }
+
+
 def confusion_matrix(y_true: Sequence[int], y_pred: Sequence[int], n: int):
     m = [[0] * n for _ in range(n)]
     for t, p in zip(y_true, y_pred):

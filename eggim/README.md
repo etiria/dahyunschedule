@@ -55,7 +55,7 @@ python3 demo.py                    # 200명 가상 코호트로 필터→등급�
 ```
 1) 매니페스트 스캐폴드   python -m eggim.scaffold_manifest /data/studies --out manifest.csv
 2) 시드 라벨링           환자 100~200명 × ~10장만 site/quality_ok 채우기 (~1,500~2,000장)
-                         └ seq_index(촬영 순서)가 부위 사전확률 → 반자동 태깅에 활용
+                         └ 부위는 순수 이미지 겉모습으로 판단 (촬영 순서는 환자마다 달라 신뢰 불가)
 3) 부위분류기 학습        python -m eggim.train site --manifest manifest.csv --out ckpt/site.pt
 4) 나머지 자동 사전분류    site 모델로 20만 장에 site/confidence 부여
 5) 사람은 검수만          확신 높은 건 통과, 애매한 것만 교정 (active learning)
@@ -63,6 +63,15 @@ python3 demo.py                    # 200명 가상 코호트로 필터→등급�
 ```
 
 핵심: **"무에서 20만 장 분류"가 "2천 장 태깅 + 나머지 교정"으로** 줄어듭니다.
+
+### 부위분류기의 핵심 난제 — 소만 vs 대만
+
+부위 분류에서 **전정부/각부/체부(region)** 구분은 쉽지만, **같은 부위의 소만 vs 대만(curvature)** 구분은
+정지 이미지 한 장만으로는 사람도 어렵습니다(내비게이션 맥락 부재). 이 오차가 그대로 EGGIM 점수 오차로 전파됩니다.
+
+- `metrics.site_error_breakdown()` 로 오차를 **region 오분류 vs curvature-only 오분류**로 분리해 진단하세요.
+- curvature 정확도가 낮으면 → 2단계(region→curvature) 분류, 다중 프레임 활용, 또는 축약형 EGGIM으로 전략 조정.
+- `config.SITE_TO_REGION` / `REGIONS` 로 coarse 라벨을 얻을 수 있습니다.
 
 ## 실제 데이터로 학습하기 (원내 보안환경 권장)
 
