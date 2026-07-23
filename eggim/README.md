@@ -48,6 +48,22 @@ python3 demo.py                    # 200명 가상 코호트로 필터→등급�
 
 `demo.py`는 정답 라벨에 노이즈를 주입해 "불완전한 모델"을 흉내 낸 뒤, 실제 프로덕션 집계 함수(`compute_eggim`)로 EGGIM을 산출하고 전문가 EGGIM과 비교합니다. (숫자는 주입 노이즈의 산물일 뿐, 실제 성능이 아닙니다 — 배관이 맞물려 도는지를 증명하는 용도.)
 
+## 부위 태깅이 없을 때 — 부트스트랩 워크플로우 (권장)
+
+20만 장을 사람이 다 분류하지 마세요. 시드 소량만 태깅하고 모델로 나머지를 사전분류한 뒤 검수합니다.
+
+```
+1) 매니페스트 스캐폴드   python -m eggim.scaffold_manifest /data/studies --out manifest.csv
+2) 시드 라벨링           환자 100~200명 × ~10장만 site/quality_ok 채우기 (~1,500~2,000장)
+                         └ seq_index(촬영 순서)가 부위 사전확률 → 반자동 태깅에 활용
+3) 부위분류기 학습        python -m eggim.train site --manifest manifest.csv --out ckpt/site.pt
+4) 나머지 자동 사전분류    site 모델로 20만 장에 site/confidence 부여
+5) 사람은 검수만          확신 높은 건 통과, 애매한 것만 교정 (active learning)
+6) IM 등급 라벨링 → grade 모델 학습
+```
+
+핵심: **"무에서 20만 장 분류"가 "2천 장 태깅 + 나머지 교정"으로** 줄어듭니다.
+
 ## 실제 데이터로 학습하기 (원내 보안환경 권장)
 
 ```bash
