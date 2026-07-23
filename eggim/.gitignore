@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+ckpt/
+*.pt
+data/
+__synthetic__/
+.venv/

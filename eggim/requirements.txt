@@ -1,0 +1,10 @@
+# Core deep-learning stack (needed for training / real inference only).
+# The aggregation logic (eggim/aggregate.py), its tests, and demo.py run on the
+# Python standard library alone.
+torch>=2.1
+torchvision>=0.16
+timm>=0.9.12
+pillow>=10.0
+numpy>=1.24
+# Optional, for richer eval metrics (AUROC, calibration) in your own scripts:
+scikit-learn>=1.3
