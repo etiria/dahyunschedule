@@ -1,0 +1,10 @@
+# Production override: serve on port 80 so the VM's "Allow HTTP" firewall is
+# enough (no extra rule for :3000 needed).
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#   -> http://<vm-ip>/label
+
+services:
+  eggim-label:
+    ports:
+      - "80:3000"
