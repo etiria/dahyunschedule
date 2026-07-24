@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+eggim-data
+label-data
+eggim/__pycache__
+**/__pycache__
+*.log
+.env
+.env.local

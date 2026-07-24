@@ -18,17 +18,51 @@ $LABEL_DATA_DIR/
 - `images/` 는 리사이즈 도구 출력(`EGD_2026_label_1280`)을 그대로 복사하면 됩니다.
 - 검사(exam) 단위는 **파일명의 환자ID + 검사일**로 자동 그룹핑됩니다(태깅 불필요).
 
-## 실행 (클라우드 VM)
+## 배포 A — Docker (권장, 턴키)
+
+VM에 Docker만 설치돼 있으면 됩니다.
+
+```bash
+# 1) 저장소를 VM에 받기 (또는 zip 업로드)
+git clone <repo> && cd dahyunschedule && git checkout claude/gastric-cancer-endoscopy-ai-j3r0tf
+
+# 2) 리사이즈된 라벨링 세트를 아래 경로에 둔다
+#    ./eggim-data/images/<환자ID>/<파일>.jpg
+mkdir -p eggim-data/images
+
+# 3) 한 줄 실행
+docker compose up -d --build
+# → http://<vm-ip>:3000/label
+```
+
+라벨은 `./eggim-data/labels/<expertId>.json` 에 저장되어 재시작해도 유지됩니다.
+
+## 배포 B — Docker 없이 (Node 20+)
 
 ```bash
 npm install
-npm run build
-LABEL_DATA_DIR=/data/eggim npm run start   # 기본 포트 3000
+npm run build     # Firebase 키가 없으면 스케줄 페이지 프리렌더가 실패하므로,
+                  # 라벨링만 쓸 땐 더미 키를 주입해 빌드한다:
+# NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyDUMMY_build_only_key_1234567890abcd \
+# NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=dummy.firebaseapp.com \
+# NEXT_PUBLIC_FIREBASE_PROJECT_ID=dummy \
+# NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=dummy.appspot.com \
+# NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=000000000000 \
+# NEXT_PUBLIC_FIREBASE_APP_ID=1:0:web:0 npm run build
+LABEL_DATA_DIR=/data/eggim npm run start   # 포트 3000
 ```
 
-- HTTPS·접속 제한은 앞단(nginx/reverse proxy, 보안그룹)에서 두는 것을 권장합니다.
-- 전문가는 브라우저로 `https://<vm>/label` 접속 → **전문가 식별자** 입력(예: `kim`, `lee`).
-  라벨은 그 식별자별 JSON에 저장되어 서로 독립적입니다(전원이 동일 250명 라벨링 → 일치도 측정 가능).
+## 이미지를 VM에 올리는 방법 (few GB, 일회성)
+
+- **rsync** (PC → VM): `rsync -avz "…/EGD_2026_label_1280/" user@vm:~/dahyunschedule/eggim-data/images/`
+- **Dropbox 경유**: 리사이즈 폴더를 Dropbox에 올린 뒤, 그 폴더의 **공유 링크(zip 다운로드)** 를 VM에서 `wget` → 압축 해제.
+- 어느 방식이든 최종적으로 `eggim-data/images/<환자ID>/<파일>.jpg` 구조가 되면 됩니다.
+
+## 접속·보안 (앞단 권장)
+
+- HTTPS + 접속 제한은 앞단(nginx reverse proxy, 클라우드 보안그룹의 IP 화이트리스트, 또는 Basic Auth)에서 둡니다.
+- 전문가는 `https://<도메인>/label` 접속 → **전문가 식별자** 입력(예: `kim`, `lee`).
+  라벨은 식별자별로 독립 저장됩니다(전원이 동일 250건 라벨링 → 일치도 측정 가능).
 
 ## 라벨링 흐름
 

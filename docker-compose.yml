@@ -1,0 +1,18 @@
+# EGGIM labeling app — one-command deploy on a cloud VM with Docker.
+#
+#   1) put the resized labeling set on the VM at ./eggim-data/images/<patient>/*.jpg
+#   2) docker compose up -d --build
+#   3) open http://<vm-ip>:3000/label   (put HTTPS + access control in front)
+#
+# Labels are written to ./eggim-data/labels and persist across restarts.
+
+services:
+  eggim-label:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - LABEL_DATA_DIR=/data/eggim
+    volumes:
+      - ./eggim-data:/data/eggim
+    restart: unless-stopped
