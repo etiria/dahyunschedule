@@ -37,6 +37,8 @@ function walkImages(dir: string, base: string, out: string[]) {
     return;
   }
   for (const e of entries) {
+    // skip hidden / macOS junk (.DS_Store, ._AppleDouble, __MACOSX from zips)
+    if (e.name.startsWith(".") || e.name === "__MACOSX") continue;
     const full = path.join(dir, e.name);
     if (e.isDirectory()) {
       walkImages(full, base, out);
