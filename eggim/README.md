@@ -54,7 +54,7 @@ python3 demo.py                    # 200명 가상 코호트로 필터→등급�
 20만 장을 사람이 다 분류하지 마세요. 시드 소량만 태깅하고 모델로 나머지를 사전분류한 뒤 검수합니다.
 
 ```
-1) 매니페스트 스캐폴드   python -m eggim.scaffold_manifest /data/studies --out manifest.csv
+1) 매니페스트 스캐폴드   python -m eggim.scaffold_manifest "G:\EGD_files\EGD_2026_images_PNG" --out manifest.csv
 2) 시드 라벨링           labeler/index.html 로 환자 100~200명 × ~10장 부위/화질 태깅 (~1,500~2,000장)
                          └ 부위는 순수 이미지 겉모습으로 판단 (촬영 순서는 환자마다 달라 신뢰 불가)
 3) 부위분류기 학습        python -m eggim.train site --manifest manifest.csv --out ckpt/site.pt
@@ -95,10 +95,17 @@ print(result.summary())          # 예: EGGIM=6/10 (HIGH risk) [antrum_lesser=2,
 | 컬럼 | 값 | 비고 |
 |---|---|---|
 | `image_path` | 파일 경로 | |
-| `patient_id` | 환자 식별자 | **분할 누수 방지에 필수** |
+| `patient_id` | 환자 식별자 (파일명 R-번호 / 폴더명) | **분할 누수 방지 키** — 한 환자의 모든 검사는 같은 split |
+| `exam_id` | `환자ID_검사일` | **EGGIM 집계 단위** — 같은 환자의 다른 날짜 검사는 별개 |
+| `exam_date` | YYYYMMDD | 파일명에서 파싱 |
+| `seq_index` | 검사 내 이미지 순번 | |
 | `site` | `antrum_lesser` / `antrum_greater` / `incisura` / `corpus_lesser` / `corpus_greater` / `other` | |
 | `quality_ok` | 0/1 | 화질·적정성 |
 | `im_grade` | 0/1/2 또는 공란 | 부위-라벨만 있는 데이터는 공란 |
+
+> 파일명 규칙 `R000000314_20090220_20090115311983770_ES_1_003.png` 를 기본 파서가 인식합니다
+> (환자ID·검사일·study·태그·series·이미지번호). 다른 규칙이면 `--pattern` 으로 정규식을 넘기세요.
+> **분할은 patient_id로, EGGIM 집계는 exam_id로** — 한 환자가 여러 번 검사받은 경우를 구분합니다.
 
 ## 실제 개발에 앞서 확보해야 할 것 (정직한 전제)
 
