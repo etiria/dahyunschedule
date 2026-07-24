@@ -38,8 +38,13 @@ class ResizeStats:
     n_resized: int = 0
     n_copied: int = 0        # already small enough / kept as-is
     n_failed: int = 0
+    out_bytes: int = 0       # total size of written files
     out_root: str = ""
     map_path: str = ""
+
+    @property
+    def out_mb(self) -> float:
+        return self.out_bytes / (1024 * 1024)
 
 
 def _target_size(w: int, h: int, max_edge: int):
@@ -110,6 +115,10 @@ def resize_tree(in_root: str, out_root: str, *, max_edge: int = 1280,
                     im.save(dst, "PNG", optimize=True)
                 else:  # keep original format/extension
                     im.save(dst)
+                try:
+                    stats.out_bytes += os.path.getsize(dst)
+                except OSError:
+                    pass
                 row.update(orig_w=w, orig_h=h, new_w=nw, new_h=nh)
         except Exception as e:  # corrupt / unreadable image -> log and continue
             stats.n_failed += 1
@@ -142,6 +151,9 @@ def main():
     s = resize_tree(args.in_root, args.out_root, max_edge=args.max_edge,
                     fmt=args.fmt, quality=args.quality, map_path=args.manifest)
     print(f"done: {s.n_total} images | resized {s.n_resized} | kept {s.n_copied} | failed {s.n_failed}")
+    size = f"{s.out_mb/1024:.2f} GB" if s.out_mb >= 1024 else f"{s.out_mb:.1f} MB"
+    avg = (s.out_bytes / max(s.n_total - s.n_failed, 1)) / 1024
+    print(f"total output size: {size}  (avg {avg:.0f} KB/image)")
     print(f"output: {s.out_root}")
     print(f"mapping: {s.map_path}")
 
