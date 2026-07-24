@@ -22,6 +22,8 @@
   button:hover { border-color: var(--accent); }
   button:disabled { opacity: .4; cursor: not-allowed; }
   .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  select { background: #232833; color: var(--fg); border: 1px solid var(--line);
+           border-radius: 6px; padding: 4px 6px; font-size: 12px; margin-left: 4px; }
   #stage { position: relative; display: flex; align-items: center; justify-content: center;
            background: #000; overflow: hidden; }
   #stage img { max-width: 100%; max-height: 100%; object-fit: contain; }
@@ -70,6 +72,12 @@
     </label>
     <label class="btn">📄 CSV 이어서
       <input id="resume" type="file" accept=".csv" hidden>
+    </label>
+    <label class="hint">모드
+      <select id="mode">
+        <option value="localizer" selected>위치 (localizer)</option>
+        <option value="full">전체 (EGGIM 등급)</option>
+      </select>
     </label>
     <span class="sp"></span>
     <label class="hint"><input type="checkbox" id="autoadv" checked> 완료 시 자동 다음</label>
@@ -146,6 +154,7 @@ const GRADES = [{key:"7",v:0,label:"0 · IM 없음"},{key:"8",v:1,label:"1 · �
 let items = [];
 let idx = 0;
 let storeKey = null;
+let mode = "localizer";   // "localizer" = position only (stage 1) | "full" = + IM grade
 
 const $ = s => document.querySelector(s);
 const isImg = n => /\.(jpe?g|png|bmp|tiff?)$/i.test(n);
@@ -159,6 +168,7 @@ function patientOf(relPath, fileName) {
 function current() { return items[idx]; }
 function complete(it) {
   if (!it.site) return false;
+  if (mode === "localizer") return true;          // stage 1: position label is enough
   if (it.site === "other") return true;
   if (it.quality_ok === 0) return true;
   return it.im_grade !== null && it.im_grade !== undefined && it.im_grade !== "";
@@ -260,6 +270,8 @@ function render() {
   }
   $("#siteOpts").querySelectorAll("[data-site]").forEach(b =>
     b.classList.toggle("sel", it && it.site === b.dataset.site));
+  // localizer mode hides IM grade entirely (stage 1 needs position only)
+  $("#gradeGroup").style.display = mode === "full" ? "" : "none";
   const scoring = it && SITES.find(s => s.value === it.site)?.scoring;
   $("#gradeGroup").classList.toggle("disabled", !(scoring && it.quality_ok === 1));
   $("#gradeOpts").querySelectorAll("[data-grade]").forEach(b =>
@@ -288,6 +300,7 @@ function setSite(v) {
   afterEdit();
 }
 function setGrade(v) {
+  if (mode !== "full") return;                     // grade ignored in localizer mode
   const it = current(); if (!it) return;
   const s = SITES.find(x => x.value === it.site);
   if (!s || !s.scoring || it.quality_ok !== 1) return;
@@ -373,6 +386,11 @@ document.addEventListener("keydown", e => {
   else if (k === "ArrowRight" || k === " ") { next(); e.preventDefault(); }
   else if (k === "ArrowLeft") { prev(); e.preventDefault(); }
   else if (k === "e" || k === "E") { openExport(); }
+});
+
+$("#mode").addEventListener("change", e => {
+  mode = e.target.value;
+  render();
 });
 
 buildPanels();
