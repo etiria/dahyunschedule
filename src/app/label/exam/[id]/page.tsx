@@ -201,6 +201,14 @@ export default function ExamLabelPage({ params }: { params: { id: string } }) {
   const eggimResult = useMemo(() => computeEggimTotal(eggim), [eggim]);
   const highRisk = isHighRisk(eggimResult.total);
   const kyotoResult = useMemo(() => computeKyoto(kyoto), [kyoto]);
+  // how many images in THIS exam are assigned to each site (for coverage badges)
+  const siteCounts = useMemo(() => {
+    const c: Record<string, number> = {};
+    for (const l of Object.values(imgLabels)) {
+      if (l.site) c[l.site] = (c[l.site] || 0) + 1;
+    }
+    return c;
+  }, [imgLabels]);
 
   if (!expert) {
     return (
@@ -293,16 +301,27 @@ export default function ExamLabelPage({ params }: { params: { id: string } }) {
             <div className="flex flex-col gap-1.5">
               {SITE_CLASSES.map((s, i) => {
                 const active = focused && imgLabels[focused.imageId]?.site === s;
+                const count = siteCounts[s] || 0;
+                const covered = count > 0;
                 return (
                   <button
                     key={s}
                     onClick={() => focused && setSite(focused.imageId, s)}
                     className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left text-sm ${
-                      active ? "border-blue-500 bg-blue-950" : "border-neutral-800 hover:border-neutral-600"
+                      active
+                        ? "border-blue-500 bg-blue-950"
+                        : covered
+                        ? "border-emerald-700 bg-emerald-950/40"
+                        : "border-neutral-800 hover:border-neutral-600"
                     }`}
                   >
                     <span className="rounded bg-neutral-800 px-1.5 text-xs">{i + 1}</span>
                     {SITE_LABELS_KO[s]}
+                    {covered && (
+                      <span className="ml-auto text-xs font-semibold text-emerald-400">
+                        ✓{count > 1 ? ` ${count}` : ""}
+                      </span>
+                    )}
                   </button>
                 );
               })}
