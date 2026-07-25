@@ -140,6 +140,15 @@ export default function LabelHome() {
           <span className="text-xs text-neutral-500">
             전문가 {progress.length}명 · 검사 {progressTotal}건
           </span>
+          <div className="flex-1" />
+          {expert === "kdh" && (
+            <Link
+              href="/label/agreement"
+              className="rounded-lg border border-amber-700 px-3 py-1 text-xs text-amber-300 hover:border-amber-500"
+            >
+              판독자간 일치도 (κ) →
+            </Link>
+          )}
         </div>
         {progress.length === 0 ? (
           <p className="text-xs text-neutral-500">아직 라벨링을 시작한 전문가가 없습니다.</p>
