@@ -13,12 +13,22 @@ interface ExamRow {
   hasKimura: boolean;
 }
 
+interface ExpertProgress {
+  expert: string;
+  done: number;
+  started: number;
+  total: number;
+  lastUpdated: string;
+}
+
 const EXPERT_KEY = "eggim_expert_id";
 
 export default function LabelHome() {
   const [expert, setExpert] = useState<string>("");
   const [input, setInput] = useState<string>("");
   const [exams, setExams] = useState<ExamRow[]>([]);
+  const [progress, setProgress] = useState<ExpertProgress[]>([]);
+  const [progressTotal, setProgressTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<"all" | "todo" | "done">("all");
 
@@ -30,9 +40,15 @@ export default function LabelHome() {
   const load = useCallback(async (id: string) => {
     setLoading(true);
     try {
-      const r = await fetch(`/api/label/exams?expert=${encodeURIComponent(id)}`);
-      const j = await r.json();
-      setExams(j.exams || []);
+      const [re, rp] = await Promise.all([
+        fetch(`/api/label/exams?expert=${encodeURIComponent(id)}`),
+        fetch(`/api/label/progress`),
+      ]);
+      const je = await re.json();
+      const jp = await rp.json();
+      setExams(je.exams || []);
+      setProgress(jp.experts || []);
+      setProgressTotal(jp.total || 0);
     } finally {
       setLoading(false);
     }
@@ -52,6 +68,7 @@ export default function LabelHome() {
     localStorage.removeItem(EXPERT_KEY);
     setExpert("");
     setExams([]);
+    setProgress([]);
   }
 
   if (!expert) {
@@ -105,11 +122,59 @@ export default function LabelHome() {
         >
           이미지 CSV
         </a>
+        <button
+          className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs hover:border-blue-500"
+          onClick={() => load(expert)}
+        >
+          새로고침
+        </button>
         <button className="text-xs text-neutral-400 hover:text-neutral-200" onClick={signOut}>
           로그아웃
         </button>
       </header>
 
+      {/* PI dashboard: all experts' progress (shown first) */}
+      <section className="mb-6 rounded-xl border border-neutral-800 bg-neutral-900 p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-semibold">전체 진행 현황</h2>
+          <span className="text-xs text-neutral-500">
+            전문가 {progress.length}명 · 검사 {progressTotal}건
+          </span>
+        </div>
+        {progress.length === 0 ? (
+          <p className="text-xs text-neutral-500">아직 라벨링을 시작한 전문가가 없습니다.</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {progress.map((p) => {
+              const pct = p.total ? Math.round((100 * p.done) / p.total) : 0;
+              const mine = p.expert === expert;
+              return (
+                <div key={p.expert} className="flex items-center gap-3 text-sm">
+                  <span
+                    className={`w-28 shrink-0 truncate ${mine ? "font-semibold text-blue-300" : "text-neutral-300"}`}
+                    title={p.expert}
+                  >
+                    {p.expert}
+                    {mine ? " (나)" : ""}
+                  </span>
+                  <div className="h-2.5 flex-1 overflow-hidden rounded bg-neutral-800">
+                    <div className="h-full bg-emerald-500" style={{ width: `${pct}%` }} />
+                  </div>
+                  <span className="w-24 shrink-0 text-right text-xs tabular-nums text-neutral-400">
+                    완료 {p.done}/{p.total}
+                    <span className="text-neutral-600"> ({pct}%)</span>
+                  </span>
+                  <span className="w-16 shrink-0 text-right text-xs tabular-nums text-neutral-500">
+                    진행 {p.started}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <h2 className="mb-2 text-sm font-semibold text-neutral-300">내 작업 목록</h2>
       <div className="mb-3 flex items-center gap-3 text-sm text-neutral-400">
         <span>
           완료 <b className="text-neutral-100">{done}</b> / {exams.length} 검사
