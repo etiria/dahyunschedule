@@ -6,6 +6,7 @@
 #
 # Labels are written to ./eggim-data/labels and persist across restarts.
 
+name: eggim
 services:
   eggim-label:
     build: .
