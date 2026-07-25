@@ -4,15 +4,20 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   computeEggimTotal,
+  computeKyoto,
   EGGIM_SITES,
   EggimSite,
   ImGrade,
   isHighRisk,
   KIMURA_CLASSES,
   KIMURA_LABELS_KO,
+  KYOTO_COMPONENTS,
+  KYOTO_MODIFIED,
+  MAX_KYOTO,
   SITE_CLASSES,
   SITE_LABELS_KO,
 } from "@/lib/label/clinical";
+import ReferenceModal, { RefTopic } from "../../ReferenceModal";
 
 interface ImgLabel {
   site?: string;
@@ -41,6 +46,8 @@ export default function ExamLabelPage({ params }: { params: { id: string } }) {
   const [imgLabels, setImgLabels] = useState<Record<string, ImgLabel>>({});
   const [kimura, setKimura] = useState<string>("");
   const [eggim, setEggim] = useState<Partial<Record<EggimSite, ImGrade>>>({});
+  const [kyoto, setKyoto] = useState<Record<string, number>>({});
+  const [refTopic, setRefTopic] = useState<RefTopic>(null);
   const [done, setDone] = useState(false);
   const [focus, setFocus] = useState(0);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
@@ -64,6 +71,7 @@ export default function ExamLabelPage({ params }: { params: { id: string } }) {
         setImgLabels(j.label.images || {});
         setKimura(j.label.kimura || "");
         setEggim(j.label.eggim || {});
+        setKyoto(j.label.kyoto || {});
         setDone(!!j.label.done);
       }
       setLoaded(true);
@@ -79,6 +87,7 @@ export default function ExamLabelPage({ params }: { params: { id: string } }) {
         images: imgLabels,
         kimura: kimura || undefined,
         eggim,
+        kyoto,
         done: markDone ?? done,
       };
       await fetch(`/api/label/labels?expert=${encodeURIComponent(expert)}`, {
@@ -90,7 +99,7 @@ export default function ExamLabelPage({ params }: { params: { id: string } }) {
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 1200);
     },
-    [expert, examId, imgLabels, kimura, eggim, done]
+    [expert, examId, imgLabels, kimura, eggim, kyoto, done]
   );
 
   // debounced autosave whenever labels change
@@ -98,7 +107,7 @@ export default function ExamLabelPage({ params }: { params: { id: string } }) {
     if (!loaded || !dirty.current) return;
     const t = setTimeout(() => save(), 900);
     return () => clearTimeout(t);
-  }, [imgLabels, kimura, eggim, loaded, save]);
+  }, [imgLabels, kimura, eggim, kyoto, loaded, save]);
 
   const mutate = (fn: () => void) => {
     dirty.current = true;
@@ -145,12 +154,25 @@ export default function ExamLabelPage({ params }: { params: { id: string } }) {
   );
   const setArea = (site: EggimSite, g: ImGrade) =>
     mutate(() => setEggim((s) => ({ ...s, [site]: s[site] === g ? undefined : g })));
+  const setKyotoComp = (key: string, v: number) =>
+    mutate(() =>
+      setKyoto((s) => {
+        const next = { ...s };
+        if (next[key] === v) delete next[key];
+        else next[key] = v;
+        return next;
+      })
+    );
 
   // keyboard: labels the focused image
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (refTopic) {
+        if (e.key === "Escape") setRefTopic(null);
+        return; // don't label while a reference popup is open
+      }
       const img = images[focus];
       if (!img) return;
       const k = e.key;
@@ -173,10 +195,11 @@ export default function ExamLabelPage({ params }: { params: { id: string } }) {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [images, focus, setSite, toggleQuality, toggleRepresentative]);
+  }, [images, focus, setSite, toggleQuality, toggleRepresentative, refTopic]);
 
   const eggimResult = useMemo(() => computeEggimTotal(eggim), [eggim]);
   const highRisk = isHighRisk(eggimResult.total);
+  const kyotoResult = useMemo(() => computeKyoto(kyoto), [kyoto]);
 
   if (!expert) {
     return (
@@ -299,7 +322,16 @@ export default function ExamLabelPage({ params }: { params: { id: string } }) {
 
           {/* exam-level: Kimura-Takemoto */}
           <section className="mb-5">
-            <h3 className="mb-2 text-xs uppercase tracking-wide text-neutral-500">Kimura-Takemoto (검사 1건)</h3>
+            <h3 className="mb-2 flex items-center text-xs uppercase tracking-wide text-neutral-500">
+              Kimura-Takemoto (검사 1건)
+              <button
+                onClick={() => setRefTopic("kimura")}
+                className="ml-2 h-5 w-5 rounded-full border border-neutral-600 text-[11px] text-neutral-400 hover:border-blue-500 hover:text-blue-400"
+                title="참조자료 보기"
+              >
+                ?
+              </button>
+            </h3>
             <div className="grid grid-cols-4 gap-1.5">
               {KIMURA_CLASSES.map((k) => (
                 <button
@@ -317,8 +349,17 @@ export default function ExamLabelPage({ params }: { params: { id: string } }) {
           </section>
 
           {/* exam-level: EGGIM per area */}
-          <section className="mb-4">
-            <h3 className="mb-2 text-xs uppercase tracking-wide text-neutral-500">EGGIM 부위별 등급</h3>
+          <section className="mb-5">
+            <h3 className="mb-2 flex items-center text-xs uppercase tracking-wide text-neutral-500">
+              EGGIM 부위별 등급
+              <button
+                onClick={() => setRefTopic("eggim")}
+                className="ml-2 h-5 w-5 rounded-full border border-neutral-600 text-[11px] text-neutral-400 hover:border-blue-500 hover:text-blue-400"
+                title="참조자료 보기"
+              >
+                ?
+              </button>
+            </h3>
             <div className="flex flex-col gap-1.5">
               {EGGIM_SITES.map((site) => (
                 <div key={site} className="flex items-center gap-2">
@@ -355,12 +396,86 @@ export default function ExamLabelPage({ params }: { params: { id: string } }) {
             </div>
           </section>
 
+          {/* exam-level: Kyoto / modified Kyoto */}
+          <section className="mb-5">
+            <h3 className="mb-2 flex items-center text-xs uppercase tracking-wide text-neutral-500">
+              Kyoto / modified Kyoto
+              <button
+                onClick={() => setRefTopic("kyoto")}
+                className="ml-2 h-5 w-5 rounded-full border border-neutral-600 text-[11px] text-neutral-400 hover:border-blue-500 hover:text-blue-400"
+                title="참조자료 보기"
+              >
+                ?
+              </button>
+            </h3>
+            <div className="flex flex-col gap-1.5">
+              {KYOTO_COMPONENTS.map((c) => (
+                <div key={c.key} className="flex items-center gap-2">
+                  <span className="w-28 shrink-0 text-sm">{c.label}</span>
+                  <div className="flex gap-1">
+                    {c.grades.map((g) => (
+                      <button
+                        key={g.v}
+                        onClick={() => setKyotoComp(c.key, g.v)}
+                        title={g.label}
+                        className={`h-8 w-8 rounded-lg border text-sm ${
+                          kyoto[c.key] === g.v
+                            ? "border-blue-500 bg-blue-950"
+                            : "border-neutral-800 hover:border-neutral-600"
+                        }`}
+                      >
+                        {g.v}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <div className="mt-1 flex items-center gap-2 border-t border-neutral-800 pt-2">
+                <span className="w-28 shrink-0 text-sm text-amber-300">{KYOTO_MODIFIED.label}</span>
+                <div className="flex gap-1">
+                  {KYOTO_MODIFIED.grades.map((g) => (
+                    <button
+                      key={g.v}
+                      onClick={() => setKyotoComp(KYOTO_MODIFIED.key, g.v)}
+                      title={g.label}
+                      className={`h-8 w-8 rounded-lg border text-sm ${
+                        kyoto[KYOTO_MODIFIED.key] === g.v
+                          ? "border-amber-500 bg-amber-950"
+                          : "border-neutral-800 hover:border-neutral-600"
+                      }`}
+                    >
+                      {g.v}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 rounded-lg bg-neutral-900 px-3 py-2 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-neutral-400">Kyoto</span>
+                {kyotoResult.complete ? (
+                  <>
+                    <b className="text-lg">{kyotoResult.total}</b>
+                    <span className="text-neutral-500">/{MAX_KYOTO}</span>
+                  </>
+                ) : (
+                  <span className="text-amber-500">미완성 {kyotoResult.assessed}/5 항목</span>
+                )}
+              </div>
+              {kyotoResult.hint && (
+                <p className="mt-1 text-[11px] text-neutral-400">{kyotoResult.hint}</p>
+              )}
+            </div>
+          </section>
+
           <p className="text-[11px] leading-relaxed text-neutral-500">
             부위 0=없음·1=국소(≤30%)·2=광범위(&gt;30%). 대표사진은 부위당 1장, 그 부위 EGGIM 등급의 근거 이미지로 사용됩니다.
-            변경 시 자동 저장됩니다.
+            각 섹션의 <b>?</b> 를 누르면 기준·모식도를 볼 수 있습니다. 변경 시 자동 저장됩니다.
           </p>
         </aside>
       </div>
+
+      <ReferenceModal topic={refTopic} onClose={() => setRefTopic(null)} />
     </div>
   );
 }

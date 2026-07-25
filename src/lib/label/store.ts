@@ -105,6 +105,7 @@ export interface ExamLabel {
   images: Record<string, ImageLabel>; // keyed by imageId
   kimura?: KimuraClass;
   eggim?: Partial<Record<EggimSite, ImGrade>>;
+  kyoto?: Record<string, number>; // Kyoto components incl. map_like_redness
   done?: boolean;
   updatedAt?: string;
 }

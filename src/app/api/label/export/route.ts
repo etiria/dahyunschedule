@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { EGGIM_SITES } from "@/lib/label/clinical";
+import { computeKyoto, EGGIM_SITES, KYOTO_STD_KEYS } from "@/lib/label/clinical";
 import { getExams, listExperts, readExpertLabels } from "@/lib/label/store";
 
 export const runtime = "nodejs";
@@ -24,7 +24,8 @@ export function GET(req: NextRequest) {
 
   if (kind === "exams") {
     header = ["expert", "exam_id", "patient_id", "exam_date", "kimura", "done",
-      ...EGGIM_SITES.map((s) => `eggim_${s}`), "eggim_total"];
+      ...EGGIM_SITES.map((s) => `eggim_${s}`), "eggim_total",
+      ...KYOTO_STD_KEYS.map((k) => `kyoto_${k}`), "kyoto_map_like_redness", "kyoto_total"];
     for (const expert of experts) {
       const labels = readExpertLabels(expert);
       for (const ex of exams) {
@@ -35,11 +36,18 @@ export function GET(req: NextRequest) {
         const total = complete
           ? grades.reduce<number>((a, g) => a + (g as number), 0)
           : "";
+        const ky = computeKyoto(l.kyoto);
         rows.push([
           expert, ex.examId, ex.patientId, ex.examDate, l.kimura ?? "",
           l.done ? "1" : "0",
           ...grades.map((g) => (g === undefined ? "" : String(g))),
           String(total),
+          ...KYOTO_STD_KEYS.map((k) => {
+            const v = l.kyoto?.[k];
+            return v === undefined ? "" : String(v);
+          }),
+          l.kyoto?.map_like_redness === undefined ? "" : String(l.kyoto.map_like_redness),
+          ky.total === null ? "" : String(ky.total),
         ]);
       }
     }

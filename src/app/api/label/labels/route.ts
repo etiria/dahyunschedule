@@ -35,6 +35,7 @@ export async function PUT(req: NextRequest) {
     images: body.images || {},
     kimura: body.kimura,
     eggim: body.eggim || {},
+    kyoto: body.kyoto || {},
     done: !!body.done,
   });
   return NextResponse.json({ label: saved });
