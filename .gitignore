@@ -31,6 +31,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# EGGIM labeling data (images + labels live on the VM, never in git)
+/eggim-data
+/label-data
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
