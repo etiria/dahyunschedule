@@ -140,6 +140,31 @@ export function writeExamLabel(expertId: string, label: ExamLabel): ExamLabel {
   return label;
 }
 
+// ---- expert roster (allowlist of valid login IDs, managed by the PI) ----
+export const ROSTER_FILE = path.join(DATA_DIR, "experts.json");
+const DEFAULT_ROSTER = ["kdh", "JMP", "MSH", "KIS"];
+
+export function readRoster(): string[] {
+  try {
+    const arr = JSON.parse(fs.readFileSync(ROSTER_FILE, "utf-8"));
+    if (Array.isArray(arr)) return arr.filter((s) => typeof s === "string");
+  } catch {
+    // no roster yet -> fall back to the seed list
+  }
+  return [...DEFAULT_ROSTER];
+}
+
+export function writeRoster(list: string[]): string[] {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  const clean = Array.from(
+    new Set(list.map((s) => sanitizeExpert(s)).filter((s) => s && s !== "anon"))
+  );
+  const tmp = ROSTER_FILE + ".tmp";
+  fs.writeFileSync(tmp, JSON.stringify(clean, null, 2));
+  fs.renameSync(tmp, ROSTER_FILE);
+  return clean;
+}
+
 export function listExperts(): string[] {
   try {
     return fs

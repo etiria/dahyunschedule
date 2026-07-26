@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
-import { getExams, listExperts, readExpertLabels } from "@/lib/label/store";
+import { getExams, readExpertLabels, readRoster } from "@/lib/label/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // GET /api/label/progress
-// PI dashboard data: per-expert completion across all exams.
+// PI dashboard data: per-expert completion across all exams (roster order).
 export function GET() {
   const total = getExams().length;
-  const experts = listExperts()
+  const experts = readRoster()
     .map((expert) => {
       const labels = readExpertLabels(expert);
       let done = 0;
@@ -25,7 +25,6 @@ export function GET() {
         if (l.updatedAt && l.updatedAt > lastUpdated) lastUpdated = l.updatedAt;
       }
       return { expert, done, started, total, lastUpdated };
-    })
-    .sort((a, b) => b.done - a.done);
+    });
   return NextResponse.json({ total, experts });
 }
