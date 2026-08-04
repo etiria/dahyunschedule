@@ -32,11 +32,12 @@ EGGIM_SITES: List[str] = [
 # Cardia retroflexion ("U-turn") view — a key view for Kimura-Takemoto, not an
 # EGGIM scoring area but a first-class localization class for the site model.
 CARDIA_UTURN = "cardia_uturn"
+FUNDUS = "fundus"
 
 # The site classifier also needs a bucket for images that are NOT one of the
 # scoring areas / named views (esophagus, duodenum, out-of-focus, etc).
 NON_TARGET_SITE = "other"
-SITE_CLASSES: List[str] = EGGIM_SITES + [CARDIA_UTURN, NON_TARGET_SITE]
+SITE_CLASSES: List[str] = EGGIM_SITES + [CARDIA_UTURN, FUNDUS, NON_TARGET_SITE]
 
 # Coarse anatomical region. Region (antrum vs incisura vs corpus) is visually
 # separable from a single frame; the lesser-vs-greater CURVATURE split inside a

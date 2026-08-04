@@ -16,8 +16,18 @@ export const NON_TARGET_SITE = "other";
 // view for Kimura-Takemoto (assessing fundus/cardia atrophic extent), so it is
 // a first-class localization label.
 export const CARDIA_UTURN = "cardia_uturn";
-export type SiteClass = EggimSite | typeof CARDIA_UTURN | typeof NON_TARGET_SITE;
-export const SITE_CLASSES: SiteClass[] = [...EGGIM_SITES, CARDIA_UTURN, NON_TARGET_SITE];
+export const FUNDUS = "fundus";
+export type SiteClass =
+  | EggimSite
+  | typeof CARDIA_UTURN
+  | typeof FUNDUS
+  | typeof NON_TARGET_SITE;
+export const SITE_CLASSES: SiteClass[] = [
+  ...EGGIM_SITES,
+  CARDIA_UTURN,
+  FUNDUS,
+  NON_TARGET_SITE,
+];
 
 export const SITE_LABELS_KO: Record<SiteClass, string> = {
   antrum_lesser: "전정부 소만",
@@ -26,6 +36,7 @@ export const SITE_LABELS_KO: Record<SiteClass, string> = {
   corpus_lesser: "체부 소만",
   corpus_greater: "체부 대만",
   cardia_uturn: "분문부 U-turn",
+  fundus: "위저부",
   other: "해당없음",
 };
 

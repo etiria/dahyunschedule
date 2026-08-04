@@ -37,7 +37,8 @@ const SITE_KEYS: Record<string, string> = {
   "4": "corpus_lesser",
   "5": "corpus_greater",
   "6": "cardia_uturn",
-  "7": "other",
+  "7": "fundus",
+  "8": "other",
 };
 
 export default function ExamLabelPage({ params }: { params: { id: string } }) {
@@ -260,6 +261,8 @@ export default function ExamLabelPage({ params }: { params: { id: string } }) {
                   ? "·"
                   : l.site === "cardia_uturn"
                   ? "U"
+                  : l.site === "fundus"
+                  ? "F"
                   : l.site.startsWith("antrum")
                   ? "A"
                   : l.site === "incisura"
@@ -296,7 +299,7 @@ export default function ExamLabelPage({ params }: { params: { id: string } }) {
           {/* per-image: localization */}
           <section className="mb-5">
             <h3 className="mb-2 text-xs uppercase tracking-wide text-neutral-500">
-              부위 (이미지 {images.length ? focus + 1 : 0}/{images.length}) · 키 1~7
+              부위 (이미지 {images.length ? focus + 1 : 0}/{images.length}) · 키 1~8
             </h3>
             <div className="flex flex-col gap-1.5">
               {SITE_CLASSES.map((s, i) => {
