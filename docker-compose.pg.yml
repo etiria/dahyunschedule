@@ -1,0 +1,21 @@
+# Second labeling instance (PG-matched 250 set) on a separate address.
+# Runs alongside the existing instance; its own data dir and port.
+#
+#   docker compose -f docker-compose.pg.yml up -d --build
+#   -> http://<vm-ip>:8080/label   (open tcp:8080 in the VM firewall)
+#
+# Put the de-identified PG set at ./eggim-pg-data/images/<regno>_<date>/*.jpg
+# Labels/roster for this instance live in ./eggim-pg-data (separate from the
+# original instance's ./eggim-data).
+
+name: eggimpg
+services:
+  eggim-label-pg:
+    build: .
+    ports:
+      - "8080:3000"
+    environment:
+      - LABEL_DATA_DIR=/data/eggim
+    volumes:
+      - ./eggim-pg-data:/data/eggim
+    restart: unless-stopped
