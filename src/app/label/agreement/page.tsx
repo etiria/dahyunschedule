@@ -11,23 +11,43 @@ function fmt(k: number | null) {
   return k === null ? "—" : k.toFixed(2);
 }
 
+interface Snapshot {
+  ts: string;
+  totalExams: number;
+  nExperts: number;
+  metrics: { metric: string; avgKappa: number | null; totalOverlap: number }[];
+}
+
 export default function AgreementPage() {
   const [expert, setExpert] = useState<string | null>(null);
-  const [data, setData] = useState<{ experts: string[]; totalExams: number; metrics: MetricAgreement[] } | null>(null);
+  const [data, setData] = useState<{ experts: string[]; totalExams: number; metrics: MetricAgreement[]; history?: Snapshot[] } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [snapping, setSnapping] = useState(false);
 
   useEffect(() => {
     setExpert(localStorage.getItem(EXPERT_KEY) || "");
   }, []);
 
-  useEffect(() => {
-    if (expert !== PI_ID) return;
+  function loadAgreement() {
     setLoading(true);
     fetch(`/api/label/agreement?requester=${encodeURIComponent(PI_ID)}`)
       .then((r) => r.json())
       .then((j) => setData(j))
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    if (expert !== PI_ID) return;
+    loadAgreement();
   }, [expert]);
+
+  function snapshotNow() {
+    setSnapping(true);
+    fetch(`/api/label/agreement?requester=${encodeURIComponent(PI_ID)}`, { method: "POST" })
+      .then((r) => r.json())
+      .then(() => loadAgreement())
+      .finally(() => setSnapping(false));
+  }
 
   if (expert === null) return <div className="p-6 text-sm text-neutral-500">불러오는 중…</div>;
 
@@ -53,6 +73,14 @@ export default function AgreementPage() {
             전문가 {data.experts.length}명 · 검사 {data.totalExams}건
           </span>
         )}
+        <button
+          onClick={snapshotNow}
+          disabled={snapping}
+          className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs hover:border-blue-500 disabled:opacity-50"
+          title="현재 κ를 주간 추이에 기록"
+        >
+          {snapping ? "기록 중…" : "스냅샷 기록"}
+        </button>
       </header>
 
       <p className="mb-4 text-xs text-neutral-500">
@@ -105,6 +133,47 @@ export default function AgreementPage() {
               )}
             </section>
           ))}
+
+          {/* weekly trend */}
+          <section className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
+            <h2 className="mb-2 text-sm font-semibold">주간 추이</h2>
+            {!data.history || data.history.length === 0 ? (
+              <p className="text-xs text-neutral-500">
+                아직 기록된 스냅샷이 없습니다. 매주 자동 기록되며, 지금 바로 남기려면 위 ‘스냅샷 기록’을 누르세요.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="text-neutral-500">
+                    <tr>
+                      <th className="py-1 text-left font-normal">날짜</th>
+                      <th className="py-1 text-right font-normal">검사수</th>
+                      {data.history[data.history.length - 1].metrics.map((m) => (
+                        <th key={m.metric} className="py-1 text-right font-normal">{m.metric.split(" ")[0]}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="tabular-nums">
+                    {data.history.slice().reverse().map((s, i) => (
+                      <tr key={i} className="border-t border-neutral-800">
+                        <td className="py-1">{s.ts.slice(0, 10)}</td>
+                        <td className="py-1 text-right">{s.totalExams}</td>
+                        {s.metrics.map((m) => (
+                          <td key={m.metric} className="py-1 text-right font-semibold">
+                            {fmt(m.avgKappa)}
+                            <span className="ml-1 font-normal text-neutral-600">({m.totalOverlap})</span>
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p className="mt-2 text-[11px] text-neutral-500">
+                  값 = 평균 κ (괄호 = 공통 라벨 검사 수). 매주 월요일 자동 기록됩니다.
+                </p>
+              </div>
+            )}
+          </section>
         </div>
       )}
     </div>

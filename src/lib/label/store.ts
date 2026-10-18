@@ -175,3 +175,31 @@ export function listExperts(): string[] {
     return [];
   }
 }
+
+// ---- weekly kappa snapshots (inter-rater agreement history) ----
+export const KAPPA_HISTORY_FILE = path.join(DATA_DIR, "kappa_history.jsonl");
+
+export interface KappaSnapshot {
+  ts: string;
+  totalExams: number;
+  nExperts: number;
+  metrics: { metric: string; avgKappa: number | null; totalOverlap: number }[];
+}
+
+export function appendKappaSnapshot(snap: KappaSnapshot): void {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.appendFileSync(KAPPA_HISTORY_FILE, JSON.stringify(snap) + "\n");
+}
+
+export function readKappaHistory(): KappaSnapshot[] {
+  try {
+    return fs
+      .readFileSync(KAPPA_HISTORY_FILE, "utf-8")
+      .split("\n")
+      .filter((l) => l.trim())
+      .map((l) => JSON.parse(l) as KappaSnapshot);
+  } catch {
+    return [];
+  }
+}
+
